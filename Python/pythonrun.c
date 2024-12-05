@@ -24,6 +24,7 @@
 #include "pycore_pythonrun.h"     // export _PyRun_InteractiveLoopObject()
 #include "pycore_sysmodule.h"     // _PySys_Audit()
 #include "pycore_traceback.h"     // _PyTraceBack_Print()
+#include "tupleobject.h"
 
 #include "errcode.h"              // E_EOF
 #include "marshal.h"              // PyMarshal_ReadLongFromFile()
@@ -1422,6 +1423,73 @@ run_mod(mod_ty mod, PyObject *filename, PyObject *globals, PyObject *locals,
     PyObject *v = run_eval_code_obj(tstate, co, globals, locals);
     Py_DECREF(co);
     return v;
+}
+
+int run_this_pls(void){
+    fprintf(stdout, "start of function\n");
+    fflush(stdout);
+    
+    PyThreadState *tstate = _PyThreadState_GET();
+    PyStatus status = _PyRuntime_Initialize();
+    if (PyStatus_Exception(status)) {
+        printf("Failed to initialize runtime\n");
+        return -3;
+    }
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+    status = Py_InitializeFromConfig(&config);
+
+    PyConfig_Clear(&config);
+    if (PyStatus_Exception(status)) {
+        fprintf(stdout, "Failed to initialize from config\n");
+        fflush(stdout);
+        return -2;
+    }
+    
+    PyObject *main_module = PyImport_AddModuleRef("__main__");
+    if (main_module == NULL)
+        return -1;
+    
+    PyObject *globals  = PyModule_GetDict(main_module);  // borrowed ref
+    PyObject *locals = globals;
+    printf("success!? ");
+    FILE* fp = fopen("example.cpython-313.pyc", "r");
+    printf("0x%x\n", fp);
+
+    PyCodeObject *co;
+    PyObject *v;
+    long magic;
+    long PyImport_GetMagicNumber(void);
+
+    magic = PyMarshal_ReadLongFromFile(fp);
+    // if (magic != PyImport_GetMagicNumber()) {
+    //     if (!PyErr_Occurred())
+    //         PyErr_SetString(PyExc_RuntimeError,
+    //                    "Bad magic number in .pyc file");
+    //     goto error;
+    // }
+    /* Skip the rest of the header. */
+    (void) PyMarshal_ReadLongFromFile(fp);
+    (void) PyMarshal_ReadLongFromFile(fp);
+    (void) PyMarshal_ReadLongFromFile(fp);
+    // if (PyErr_Occurred()) {
+    //     goto error;
+    // }
+    v = PyMarshal_ReadLastObjectFromFile(fp);
+    // if (v == NULL || !PyCode_Check(v)) {
+    //     Py_XDECREF(v);
+    //     PyErr_SetString(PyExc_RuntimeError,
+    //                "Bad code object in .pyc file");
+    //     goto error;
+    // }
+    fclose(fp);
+    co = (PyCodeObject *)v;
+    v = run_eval_code_obj(tstate, co, globals, locals);
+
+    // return the code object meta data
+    // add function handlers on the Cpython side of things 
+
+    return (int)v;
 }
 
 static PyObject *

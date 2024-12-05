@@ -72,6 +72,9 @@ PyAPI_FUNC(PyObject *) PyRun_File(FILE *fp, const char *p, int s, PyObject *g, P
 PyAPI_FUNC(PyObject *) PyRun_FileEx(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, int c);
 PyAPI_FUNC(PyObject *) PyRun_FileFlags(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, PyCompilerFlags *flags);
 
+__attribute__ ((export_name("run_this_pls")))
+int run_this_pls(void);
+
 /* Use macros for a bunch of old variants */
 #define PyRun_String(str, s, g, l) PyRun_StringFlags((str), (s), (g), (l), NULL)
 #define PyRun_AnyFile(fp, name) PyRun_AnyFileExFlags((fp), (name), 0, NULL)
