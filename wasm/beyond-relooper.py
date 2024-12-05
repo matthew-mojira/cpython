@@ -125,7 +125,7 @@ def print_tree(root, level=0):
     """Utility function to print the tree structure."""
     if not root:
         return
-    print("  " * level + f"Node({root.val})")
+    print("   " * level + f"Node({root.val})")
     for child in root.children:
         print_tree(child, level + 1)
 
@@ -138,39 +138,73 @@ class WasmWrapper:
     def __repr__(self) -> str:
         return f"WrapperFor({cfg_bytecode.get_block_index(self.basic_block)})"
 
+    def print_nesting(self, nest):
+        print("   " * nest + f"#{cfg_bytecode.get_block_index(self.basic_block)}")
+
 @dataclass(kw_only=True)
 class WasmStructure:
     in_count : int
     out_count : int 
 
+    def block_type(self) -> str:
+        return f"[{self.in_count} -> {self.out_count}]"
+
 @dataclass(kw_only=True)
 class WasmBlock(WasmStructure):
     blocks: list["Block"]
 
+    def print_nesting(self, nest):
+        print("   " * nest + f"block {self.block_type()}")
+        for b in self.blocks:
+            b.print_nesting(nest + 1)
+        print("   " * nest + f"end")
 
 @dataclass(kw_only=True)
 class WasmIf(WasmStructure):
     br1: list["Block"]
     br2: list["Block"]
 
+    def print_nesting(self, nest):
+        print("   " * nest + f"if {self.block_type()}")
+        for b in self.br1:
+            b.print_nesting(nest + 1)
+        print("   " * nest + f"else")
+        for b in self.br2:
+            b.print_nesting(nest + 1)
+        print("   " * nest + f"end")
+
 
 @dataclass(kw_only=True)
 class WasmLoop(WasmStructure):
     blocks: list["Block"]
 
+    def print_nesting(self, nest):
+        print("   " * nest + f"loop {self.block_type()}")
+        for b in self.blocks:
+            b.print_nesting(nest + 1)
+        print("   " * nest + f"end")
 
 @dataclass
 class WasmBranch:
     target: int
 
+    def print_nesting(self, nest):
+        print("   " * nest + f"br {self.target}")
 
 @dataclass
 class WasmReturn:
     pass
 
+    def print_nesting(self, nest):
+        print("   " * nest + f"return")
+
 @dataclass
 class WasmUnreachable:
     pass
+
+    def print_nesting(self, nest):
+        print("   " * nest + f"unreachable")
+
 
 
 
@@ -444,6 +478,11 @@ reverse_order_map_computed = reverse_postorder(G)
 stack_sizes = compute_stack_size(G)
 info = TranslationInfo(G, reverse_order_map_computed, imm_dom_tree, stack_sizes)
 print(do_tree(info, imm_dom_tree,[]))
+
+print()
+
+for x in do_tree(info, imm_dom_tree,[]):
+ x.print_nesting(0)
 
 print()
 # nx.draw(G,  with_labels = True)
