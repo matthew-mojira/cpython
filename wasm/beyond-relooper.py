@@ -8,83 +8,46 @@ from bytecode import (
     ControlFlowGraph,
     BasicBlock,
 )
+
 from dataclasses import dataclass
-
-# Define labels
-L1 = Label()
-L2 = Label()
-L3 = Label()
-
-# Construct the bytecode
-code = Bytecode(
-    [
-        Instr("RESUME", 0),
-        Instr("LOAD_FAST", "a"),
-        Instr("LOAD_CONST", 0),
-        Instr("COMPARE_OP", Compare.LT_CAST),
-        Instr("POP_JUMP_IF_FALSE", L1),
-        # If a < 0
-        Instr("LOAD_FAST", "b"),
-        Instr("LOAD_CONST", 3),
-        Instr("BINARY_OP", BinaryOp.MULTIPLY),
-        Instr("LOAD_FAST", "a"),
-        Instr("BINARY_OP", BinaryOp.ADD),
-        Instr("RETURN_VALUE"),
-        # Label L1
-        L1,
-        Instr("LOAD_FAST", "a"),
-        Instr("LOAD_CONST", 0),
-        Instr("COMPARE_OP", Compare.GT_CAST),
-        Instr("POP_JUMP_IF_FALSE", L3),
-        # Label L2 (start of the loop)
-        L2,
-        Instr("LOAD_FAST", "b"),
-        Instr("LOAD_FAST", "a"),
-        Instr("BINARY_OP", BinaryOp.ADD),
-        Instr("STORE_FAST", "b"),
-        Instr("LOAD_FAST", "a"),
-        Instr("LOAD_CONST", 1),
-        Instr("BINARY_OP", BinaryOp.SUBTRACT),
-        Instr("STORE_FAST", "a"),
-        Instr("LOAD_FAST", "a"),
-        Instr("LOAD_CONST", 0),
-        Instr("COMPARE_OP", Compare.GT_CAST),
-        Instr("POP_JUMP_IF_FALSE", L3),
-        Instr("JUMP_BACKWARD", L2),
-        # Label L3
-        L3,
-        Instr("LOAD_CONST", "hello "),
-        Instr("LOAD_FAST", "b"),
-        Instr("FORMAT_SIMPLE"),
-        Instr("BUILD_STRING", 2),
-        Instr("RETURN_VALUE"),
-    ]
-)
-
-cfg_bytecode = ControlFlowGraph.from_bytecode(code)
-
-
-dump_bytecode(cfg_bytecode)
-# print(cfg[4][0].arg)
-
+import matplotlib.pyplot as plt
 import networkx as nx
 
-G = nx.DiGraph()
+def cfg_to_network(cfg_bytecode : ControlFlowGraph):
+    G = nx.DiGraph()
+    for basic_block in cfg_bytecode:
+        G.add_node(cfg_bytecode.get_block_index(basic_block), block=basic_block)
 
-for basic_block in cfg_bytecode:
-    G.add_node(cfg_bytecode.get_block_index(basic_block), block=basic_block)
+    for basic_block in cfg_bytecode:
+        curr_index = cfg_bytecode.get_block_index(basic_block)
+        jump_targets = []
+        next_jump = basic_block.get_jump()
+        if next_jump:
+            jump_targets.append(cfg_bytecode.get_block_index(next_jump))
+        next_block = basic_block.next_block
+        if next_block:
+            jump_targets.append(cfg_bytecode.get_block_index(next_block))
+        for target in jump_targets:
+            G.add_edge(curr_index, target)
+    return G
 
-for basic_block in cfg_bytecode:
-    curr_index = cfg_bytecode.get_block_index(basic_block)
-    jump_targets = []
-    next_jump = basic_block.get_jump()
-    if next_jump:
-        jump_targets.append(cfg_bytecode.get_block_index(next_jump))
-    next_block = basic_block.next_block
-    if next_block:
-        jump_targets.append(cfg_bytecode.get_block_index(next_block))
-    for target in jump_targets:
-        G.add_edge(curr_index, target)
+def compute_stack_size(cfg: nx.DiGraph):
+    sizes = {0:0}
+    visited = set()
+    def dfs(node):
+        if node in visited:
+            return
+        visited.add(node)
+        curr_start= sizes[node]
+        bb : BasicBlock = cfg.nodes[node]["block"]
+        for ins in bb:
+            curr_start += ins.stack_effect()
+        
+        for neighbor in cfg.successors(node):
+            sizes[neighbor] = curr_start
+            dfs(neighbor)
+    dfs(0)
+    return sizes
 
 
 def reverse_postorder(graph):
@@ -122,11 +85,6 @@ def reverse_postorder(graph):
     return reverse_postorder_map
 
 
-reverse_order_map_computed = reverse_postorder(G)
-import matplotlib.pyplot as plt
-
-# nx.draw(G,  with_labels = True)
-# plt.show()
 
 
 @dataclass
@@ -172,10 +130,6 @@ def print_tree(root, level=0):
         print_tree(child, level + 1)
 
 
-imm_dom_tree = build_tree_from_dict(nx.immediate_dominators(G, 0))
-
-
-
 
 @dataclass
 class WasmWrapper:
@@ -184,19 +138,24 @@ class WasmWrapper:
     def __repr__(self) -> str:
         return f"WrapperFor({cfg_bytecode.get_block_index(self.basic_block)})"
 
-@dataclass
-class WasmBlock:
+@dataclass(kw_only=True)
+class WasmStructure:
+    in_count : int
+    out_count : int 
+
+@dataclass(kw_only=True)
+class WasmBlock(WasmStructure):
     blocks: list["Block"]
 
 
-@dataclass
-class WasmIf:
+@dataclass(kw_only=True)
+class WasmIf(WasmStructure):
     br1: list["Block"]
     br2: list["Block"]
 
 
-@dataclass
-class WasmLoop:
+@dataclass(kw_only=True)
+class WasmLoop(WasmStructure):
     blocks: list["Block"]
 
 
@@ -209,8 +168,13 @@ class WasmBranch:
 class WasmReturn:
     pass
 
+@dataclass
+class WasmUnreachable:
+    pass
 
-Block = WasmWrapper | WasmBlock | WasmIf | WasmLoop | WasmBranch
+
+
+Block = WasmWrapper | WasmBlock | WasmIf | WasmLoop | WasmBranch | WasmUnreachable
 
 
 @dataclass
@@ -233,11 +197,14 @@ ContainingSyntax = IfThenElse | LoopHeadedBy | BlockFolloedBy
 Context = list[ContainingSyntax]
 
 
+
+
 @dataclass
 class TranslationInfo:
     cfg: nx.DiGraph
     reverse_order_map: dict[any, int]
     full_dom_tree: TreeNode
+    stack_sizes : dict[any, int]
 
 
 
@@ -257,28 +224,38 @@ def node_with_in(
             next = [WasmReturn()]
         elif len(successors) == 1:
             next = do_branch(info, node, successors[0], context)
-        else:
+        elif len(successors) == 2:
             new_context = [IfThenElse()] + context
+            if info.stack_sizes[successors[0]] != info.stack_sizes[successors[1]]:
+                raise RuntimeError("failed branch agreement")
+            
+            #note that if both branches of the if eventually will branch out, then there shouldn't actually be code following the "following fall behaviour of the if", like there are no code immediately after the if statement since everything should be branched out. In this case, we can say the output type is always nothing
             next = [
                 WasmIf(
                     br1=do_branch(info, node, successors[0], new_context),
                     br2=do_branch(info, node, successors[1], new_context),
-                )
+                    in_count= info.stack_sizes[successors[0]],
+                    out_count= 0
+                ),
+                WasmUnreachable() #this is to ensure that the return type calculation in the validation algorithm correctly recognizes that there is in effect no way for the if to fall off naturally, and therefore will not complain about the stack size unification
             ]
+        else:
+            raise RuntimeError("more than two branches")
         return [content] + next
     else:
         merge_child = sorted_merge_children[0]
         other_children = sorted_merge_children[1:]
         return [
             WasmBlock(
-                node_with_in(
+                blocks=node_with_in(
                     info,
                     node,
                     other_children,
                     [BlockFolloedBy(merge_child.val)] + context,
-                )
+                ),
+                in_count = info.stack_sizes[node],
+                out_count= info.stack_sizes[merge_child.val],
             )
-            # block type needs to have all the stacks
         ] + do_tree(info, merge_child, context)
 
 
@@ -330,7 +307,11 @@ def do_tree(info: TranslationInfo, node_dom: TreeNode, context: Context):
         context,
     )
     if is_loop_header(info, node):
-        return [WasmLoop(code_for_node([LoopHeadedBy(node)] + context))]
+        
+        # similar to the discussion about the if earlier, I don't believe the loop will fall through(in fact the author misunderstood the semantics of the loop)
+        return [WasmLoop(blocks=code_for_node([LoopHeadedBy(node)] + context),
+                         in_count=info.stack_sizes[node],
+                         out_count=0)]
     else:
         return code_for_node(context)
 
@@ -359,17 +340,112 @@ def do_branch(info: TranslationInfo, source, target, context: Context):
         return do_tree(info, subtree_at(info, target), context)
 
 
-def index(label, context: Context):
+def index(find_label, context: Context):
     match context:
-        case [BlockFolloedBy(label=label), *more_context]:
+        case [BlockFolloedBy(label=label), *more_context] if label == find_label:
             return 0
-        case [LoopHeadedBy(label=label), *more_context]:
+        case [LoopHeadedBy(label=label), *more_context] if label == find_label:
             return 0
         case [_, *more_context]:
-            return 1 + index(label, more_context)
+            return 1 + index(find_label, more_context)
         case _ :
             raise RuntimeError("destination label not in evaluation context")
 
 
-info = TranslationInfo(G, reverse_order_map_computed, imm_dom_tree)
+
+
+# Define labels
+L1 = Label()
+L2 = Label()
+L3 = Label()
+
+
+
+# # Construct the bytecode
+# code = Bytecode(
+#     [
+#         Instr("RESUME", 0),
+#         Instr("LOAD_FAST", "a"),
+#         Instr("LOAD_CONST", 0),
+#         Instr("COMPARE_OP", Compare.LT_CAST),
+#         Instr("POP_JUMP_IF_FALSE", L1),
+#         # If a < 0
+#         Instr("LOAD_FAST", "b"),
+#         Instr("LOAD_CONST", 3),
+#         Instr("BINARY_OP", BinaryOp.MULTIPLY),
+#         Instr("LOAD_FAST", "a"),
+#         Instr("BINARY_OP", BinaryOp.ADD),
+#         Instr("RETURN_VALUE"),
+#         # Label L1
+#         L1,
+#         Instr("LOAD_FAST", "a"),
+#         Instr("LOAD_CONST", 0),
+#         Instr("COMPARE_OP", Compare.GT_CAST),
+#         Instr("POP_JUMP_IF_FALSE", L3),
+#         # Label L2 (start of the loop)
+#         L2,
+#         Instr("LOAD_FAST", "b"),
+#         Instr("LOAD_FAST", "a"),
+#         Instr("BINARY_OP", BinaryOp.ADD),
+#         Instr("STORE_FAST", "b"),
+#         Instr("LOAD_FAST", "a"),
+#         Instr("LOAD_CONST", 1),
+#         Instr("BINARY_OP", BinaryOp.SUBTRACT),
+#         Instr("STORE_FAST", "a"),
+#         Instr("LOAD_FAST", "a"),
+#         Instr("LOAD_CONST", 0),
+#         Instr("COMPARE_OP", Compare.GT_CAST),
+#         Instr("POP_JUMP_IF_FALSE", L3),
+#         Instr("JUMP_BACKWARD", L2),
+#         # Label L3
+#         L3,
+#         Instr("LOAD_CONST", "hello "),
+#         Instr("LOAD_FAST", "b"),
+#         Instr("FORMAT_SIMPLE"),
+#         Instr("BUILD_STRING", 2),
+#         Instr("RETURN_VALUE"),
+#     ]
+# )
+
+code = Bytecode(
+    [
+        Instr("RESUME", 0),
+        
+        Instr("LOAD_CONST", 4),
+        Instr("LOAD_CONST", 3), 
+        Instr("COPY", 1),
+        Instr("LOAD_CONST", 10), 
+        Instr("COMPARE_OP", Compare.LT_CAST), 
+        Instr("POP_JUMP_IF_FALSE", L2),
+
+        # Label L1
+        L1,
+        Instr("LOAD_CONST", 1),  # 1
+        Instr("BINARY_OP", BinaryOp.ADD),
+        Instr("COPY", 1),
+        Instr("LOAD_CONST", 10), 
+        Instr("COMPARE_OP", Compare.LT_CAST),  # bool(<)
+        Instr("POP_JUMP_IF_FALSE", L2),
+        Instr("JUMP_BACKWARD", L1),
+        
+        # Label L2
+        L2,
+        Instr("BINARY_OP", BinaryOp.ADD),
+        Instr("RETURN_VALUE"),
+    ]
+)
+
+cfg_bytecode = ControlFlowGraph.from_bytecode(code)
+dump_bytecode(cfg_bytecode)
+G = cfg_to_network(cfg_bytecode)
+imm_dom_tree = build_tree_from_dict(nx.immediate_dominators(G, 0))
+
+reverse_order_map_computed = reverse_postorder(G)
+stack_sizes = compute_stack_size(G)
+info = TranslationInfo(G, reverse_order_map_computed, imm_dom_tree, stack_sizes)
 print(do_tree(info, imm_dom_tree,[]))
+
+print()
+# nx.draw(G,  with_labels = True)
+# plt.show()
+
