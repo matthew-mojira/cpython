@@ -1453,7 +1453,7 @@ int run_this_pls(void){
     PyObject *globals  = PyModule_GetDict(main_module);  // borrowed ref
     PyObject *locals = globals;
     printf("success!? ");
-    FILE* fp = fopen("example.cpython-313.pyc", "r");
+    FILE* fp = fopen("example.pyc", "r");
     printf("0x%x\n", fp);
 
     PyCodeObject *co;
@@ -1484,6 +1484,11 @@ int run_this_pls(void){
     // }
     fclose(fp);
     co = (PyCodeObject *)v;
+    
+    printf("0: %d\n", ((PyCodeObject *) PyTuple_GET_ITEM(co->co_consts, 0))->co_nlocals);
+    printf("1: %d\n", ((PyCodeObject *) PyTuple_GET_ITEM(co->co_consts, 1))->co_nlocals);
+    printf("2: %d\n", ((PyCodeObject *) PyTuple_GET_ITEM(co->co_consts, 2))->co_nlocals);
+    
     v = run_eval_code_obj(tstate, co, globals, locals);
 
     // return the code object meta data
