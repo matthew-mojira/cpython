@@ -72,8 +72,8 @@ PyAPI_FUNC(PyObject *) PyRun_File(FILE *fp, const char *p, int s, PyObject *g, P
 PyAPI_FUNC(PyObject *) PyRun_FileEx(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, int c);
 PyAPI_FUNC(PyObject *) PyRun_FileFlags(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, PyCompilerFlags *flags);
 
-__attribute__ ((export_name("run_this_pls")))
-int run_this_pls(void);
+__attribute__ ((export_name("wasm_get_python_consts")))
+PyObject* wasm_get_python_consts(void);
 
 /* Use macros for a bunch of old variants */
 #define PyRun_String(str, s, g, l) PyRun_StringFlags((str), (s), (g), (l), NULL)
@@ -97,3 +97,7 @@ int run_this_pls(void);
 /* Stuff with no proper home (yet) */
 PyAPI_FUNC(char *) PyOS_Readline(FILE *, FILE *, const char *);
 PyAPI_DATA(char) *(*PyOS_ReadlineFunctionPointer)(FILE *, FILE *, const char *);
+
+__attribute__ ((export_name("Wasm_Load_Const"))) PyObject* Wasm_Load_Const(PyObject* const_pool, int oparg);
+
+__attribute__ ((export_name("Wasm_Get_Long"))) int Wasm_Get_Long(PyObject* num);

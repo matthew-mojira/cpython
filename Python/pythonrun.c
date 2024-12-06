@@ -1425,9 +1425,9 @@ run_mod(mod_ty mod, PyObject *filename, PyObject *globals, PyObject *locals,
     return v;
 }
 
-int run_this_pls(void){
-    fprintf(stdout, "start of function\n");
-    fflush(stdout);
+PyObject* wasm_get_python_consts(void){
+    // fprintf(stdout, "start of function\n");
+    // fflush(stdout);
     
     PyThreadState *tstate = _PyThreadState_GET();
     PyStatus status = _PyRuntime_Initialize();
@@ -1452,9 +1452,9 @@ int run_this_pls(void){
     
     PyObject *globals  = PyModule_GetDict(main_module);  // borrowed ref
     PyObject *locals = globals;
-    printf("success!? ");
+    // printf("success!? ");
     FILE* fp = fopen("example.cpython-313.pyc", "r");
-    printf("0x%x\n", fp);
+    // printf("0x%x\n", fp);
 
     PyCodeObject *co;
     PyObject *v;
@@ -1484,12 +1484,7 @@ int run_this_pls(void){
     // }
     fclose(fp);
     co = (PyCodeObject *)v;
-    v = run_eval_code_obj(tstate, co, globals, locals);
-
-    // return the code object meta data
-    // add function handlers on the Cpython side of things 
-
-    return (int)v;
+    return co->co_consts;
 }
 
 static PyObject *
