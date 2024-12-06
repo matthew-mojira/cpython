@@ -1429,62 +1429,76 @@ PyObject* wasm_get_python_consts(void){
     // fprintf(stdout, "start of function\n");
     // fflush(stdout);
     
-    PyThreadState *tstate = _PyThreadState_GET();
+    // PyThreadState *tstate = _PyThreadState_GET();
     PyStatus status = _PyRuntime_Initialize();
     if (PyStatus_Exception(status)) {
         printf("Failed to initialize runtime\n");
+        fflush(stdout);
         return -3;
     }
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
     status = Py_InitializeFromConfig(&config);
-
+    
     PyConfig_Clear(&config);
     if (PyStatus_Exception(status)) {
         fprintf(stdout, "Failed to initialize from config\n");
         fflush(stdout);
         return -2;
     }
-    
+    // fprintf(stdout, "here1 \n");
+    // fflush(stdout);
     PyObject *main_module = PyImport_AddModuleRef("__main__");
     if (main_module == NULL)
         return -1;
     
+    // fprintf(stdout, "here2 \n");
+    // fflush(stdout);
     PyObject *globals  = PyModule_GetDict(main_module);  // borrowed ref
     PyObject *locals = globals;
+
+    // fprintf(stdout, "here3 \n");
+    // fflush(stdout);
     // printf("success!? ");
     FILE* fp = fopen("example.cpython-313.pyc", "r");
-    // printf("0x%x\n", fp);
+    printf("0x%x\n", fp);
 
+    PyThreadState *tstate = _PyThreadState_GET();
     PyCodeObject *co;
     PyObject *v;
     long magic;
     long PyImport_GetMagicNumber(void);
 
     magic = PyMarshal_ReadLongFromFile(fp);
-    // if (magic != PyImport_GetMagicNumber()) {
-    //     if (!PyErr_Occurred())
-    //         PyErr_SetString(PyExc_RuntimeError,
-    //                    "Bad magic number in .pyc file");
-    //     goto error;
-    // }
+    if (magic != PyImport_GetMagicNumber()) {
+        if (!PyErr_Occurred())
+            PyErr_SetString(PyExc_RuntimeError,
+                       "Bad magic number in .pyc file");
+        goto error;
+    }
     /* Skip the rest of the header. */
     (void) PyMarshal_ReadLongFromFile(fp);
     (void) PyMarshal_ReadLongFromFile(fp);
     (void) PyMarshal_ReadLongFromFile(fp);
-    // if (PyErr_Occurred()) {
-    //     goto error;
-    // }
+    if (PyErr_Occurred()) {
+        goto error;
+    }
     v = PyMarshal_ReadLastObjectFromFile(fp);
-    // if (v == NULL || !PyCode_Check(v)) {
-    //     Py_XDECREF(v);
-    //     PyErr_SetString(PyExc_RuntimeError,
-    //                "Bad code object in .pyc file");
-    //     goto error;
-    // }
+    if (v == NULL || !PyCode_Check(v)) {
+        Py_XDECREF(v);
+        PyErr_SetString(PyExc_RuntimeError,
+                   "Bad code object in .pyc file");
+        goto error;
+    }
     fclose(fp);
     co = (PyCodeObject *)v;
+
+    fprintf(stdout, "here4 \n");
+    fflush(stdout);
     return co->co_consts;
+    error:
+        fclose(fp);
+        return NULL;
 }
 
 static PyObject *

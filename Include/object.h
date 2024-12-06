@@ -590,7 +590,7 @@ PyAPI_FUNC(int) PyObject_GenericSetDict(PyObject *, PyObject *, void *);
 PyAPI_FUNC(Py_hash_t) PyObject_Hash(PyObject *);
 PyAPI_FUNC(Py_hash_t) PyObject_HashNotImplemented(PyObject *);
 __attribute__ ((export_name("PyObject_IsTrue"))) PyAPI_FUNC(int) PyObject_IsTrue(PyObject *);
-__attribute__ ((export_name("PyObject_IsTrue"))) PyAPI_FUNC(int) PyObject_Not(PyObject *);
+__attribute__ ((export_name("PyObject_Not"))) PyAPI_FUNC(int) PyObject_Not(PyObject *);
 PyAPI_FUNC(int) PyCallable_Check(PyObject *);
 PyAPI_FUNC(void) PyObject_ClearWeakRefs(PyObject *);
 

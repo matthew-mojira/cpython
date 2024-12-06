@@ -19,7 +19,7 @@ linker = Linker(engine)
 linker.define_wasi()
 wasi = WasiConfig()
 wasi.inherit_stdout()
-wasi.preopen_dir("/home/peter/github/cpython", "/")
+wasi.preopen_dir("/home/mschnei2/cpython", "/")
 
 store.set_wasi(wasi)
 

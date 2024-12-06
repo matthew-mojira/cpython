@@ -100,4 +100,12 @@ PyAPI_DATA(char) *(*PyOS_ReadlineFunctionPointer)(FILE *, FILE *, const char *);
 
 __attribute__ ((export_name("Wasm_Load_Const"))) PyObject* Wasm_Load_Const(PyObject* const_pool, int oparg);
 
+__attribute__ ((export_name("Wasm_Binary_Op"))) PyObject* Wasm_Binary_Op(PyObject* lhs, PyObject* rhs, int oparg);
+
+__attribute__ ((export_name("Wasm_Binary_Comp"))) PyObject* Wasm_Binary_Comp(PyObject* lhs, PyObject* rhs, int oparg);
+
+__attribute__ ((export_name("Wasm_From_Long")))  PyObject* Wasm_From_Long(int number);
+
 __attribute__ ((export_name("Wasm_Get_Long"))) int Wasm_Get_Long(PyObject* num);
+
+__attribute__ ((export_name("debug_print_here"))) void debug_print_here(int num);

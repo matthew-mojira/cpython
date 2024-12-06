@@ -46,37 +46,8 @@ PyObject* Wasm_Load_Const(PyObject* const_pool, int oparg){
 }
 
 
-const binaryfunc _PyEval_BinaryOps[] = {
-    [NB_ADD] = PyNumber_Add,
-    [NB_AND] = PyNumber_And,
-    [NB_FLOOR_DIVIDE] = PyNumber_FloorDivide,
-    [NB_LSHIFT] = PyNumber_Lshift,
-    [NB_MATRIX_MULTIPLY] = PyNumber_MatrixMultiply,
-    [NB_MULTIPLY] = PyNumber_Multiply,
-    [NB_REMAINDER] = PyNumber_Remainder,
-    [NB_OR] = PyNumber_Or,
-    [NB_POWER] = _PyNumber_PowerNoMod,
-    [NB_RSHIFT] = PyNumber_Rshift,
-    [NB_SUBTRACT] = PyNumber_Subtract,
-    [NB_TRUE_DIVIDE] = PyNumber_TrueDivide,
-    [NB_XOR] = PyNumber_Xor,
-    [NB_INPLACE_ADD] = PyNumber_InPlaceAdd,
-    [NB_INPLACE_AND] = PyNumber_InPlaceAnd,
-    [NB_INPLACE_FLOOR_DIVIDE] = PyNumber_InPlaceFloorDivide,
-    [NB_INPLACE_LSHIFT] = PyNumber_InPlaceLshift,
-    [NB_INPLACE_MATRIX_MULTIPLY] = PyNumber_InPlaceMatrixMultiply,
-    [NB_INPLACE_MULTIPLY] = PyNumber_InPlaceMultiply,
-    [NB_INPLACE_REMAINDER] = PyNumber_InPlaceRemainder,
-    [NB_INPLACE_OR] = PyNumber_InPlaceOr,
-    [NB_INPLACE_POWER] = _PyNumber_InPlacePowerNoMod,
-    [NB_INPLACE_RSHIFT] = PyNumber_InPlaceRshift,
-    [NB_INPLACE_SUBTRACT] = PyNumber_InPlaceSubtract,
-    [NB_INPLACE_TRUE_DIVIDE] = PyNumber_InPlaceTrueDivide,
-    [NB_INPLACE_XOR] = PyNumber_InPlaceXor,
-};
 
-
-PyObject* Wasm_Binary_OP(PyObject* lhs, PyObject* rhs, int oparg)
+PyObject* Wasm_Binary_Op(PyObject* lhs, PyObject* rhs, int oparg)
 {
     PyObject *res;
     res = _PyEval_BinaryOps[oparg](lhs, rhs);
@@ -85,23 +56,38 @@ PyObject* Wasm_Binary_OP(PyObject* lhs, PyObject* rhs, int oparg)
     return res;
 }
 
-PyObject* Wasm_Binary_OP(PyObject* lhs, PyObject rhs, int oparg)
+PyObject* Wasm_Binary_Comp(PyObject* left, PyObject* right, int oparg)
 {
     assert((oparg >> 5) <= Py_GE);
-    res = PyObject_RichCompare(lhs, rhs, oparg >> 5);
+    int lhs = Wasm_Get_Long(left);
+    int rhs = Wasm_Get_Long(right);
+
+    PyObject* res = PyObject_RichCompare(left, right, oparg >> 5);
     Py_DECREF(left);
     Py_DECREF(right);
     if (oparg & 16) {
         int res_bool = PyObject_IsTrue(res);
         Py_DECREF(res);
-        if (res_bool < 0) goto pop_2_error;
+        // if (res_bool < 0) goto pop_2_error;
         res = res_bool ? Py_True : Py_False;
-    }
+    } 
+    return res;
 }
 
+
+PyObject* Wasm_From_Long(int number)
+{
+    return PyLong_FromLong(number);
+}
 
 
 int Wasm_Get_Long(PyObject* obj)
 {
     return PyLong_AsLong(obj);
+}
+
+void debug_print_here(int num)
+{
+    printf("%d \n", num);
+    fflush(stdout);
 }
