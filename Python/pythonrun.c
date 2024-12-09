@@ -1460,8 +1460,8 @@ PyObject* wasm_get_python_consts(void){
     // fprintf(stdout, "here3 \n");
     // fflush(stdout);
     // printf("success!? ");
-    FILE* fp = fopen("example.cpython-313.pyc", "r");
-    printf("0x%x\n", fp);
+    FILE* fp = fopen("wasm/example.cpython-313.pyc", "r");
+    // printf("0x%x\n", fp);
 
     PyThreadState *tstate = _PyThreadState_GET();
     PyCodeObject *co;
@@ -1493,9 +1493,9 @@ PyObject* wasm_get_python_consts(void){
     fclose(fp);
     co = (PyCodeObject *)v;
 
-    fprintf(stdout, "here4 \n");
+    // fprintf(stdout, "here4 \n");
     fflush(stdout);
-    return co->co_consts;
+    return ((PyCodeObject *) PyTuple_GET_ITEM(co->co_consts, 0))->co_consts;
     error:
         fclose(fp);
         return NULL;

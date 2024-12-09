@@ -91,3 +91,11 @@ void debug_print_here(int num)
     printf("%d \n", num);
     fflush(stdout);
 }
+
+PyObject* Wasm_PyObject_ToBool(PyObject* obj)
+{
+    int res_bool = PyObject_IsTrue(obj);
+    Py_DECREF(obj);
+    PyObject* res  = res_bool ? Py_True : Py_False;
+    return res;
+}

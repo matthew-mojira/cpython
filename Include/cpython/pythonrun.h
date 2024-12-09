@@ -106,6 +106,9 @@ __attribute__ ((export_name("Wasm_Binary_Comp"))) PyObject* Wasm_Binary_Comp(PyO
 
 __attribute__ ((export_name("Wasm_From_Long")))  PyObject* Wasm_From_Long(int number);
 
+__attribute__ ((export_name("Wasm_PyObject_ToBool"))) PyObject* Wasm_PyObject_ToBool(PyObject* obj);
+
 __attribute__ ((export_name("Wasm_Get_Long"))) int Wasm_Get_Long(PyObject* num);
 
 __attribute__ ((export_name("debug_print_here"))) void debug_print_here(int num);
+

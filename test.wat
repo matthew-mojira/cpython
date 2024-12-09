@@ -7,7 +7,6 @@
     (import "python" "Wasm_Binary_Op" (func $Wasm_Binary_Op (param i32 i32 i32) (result i32)))
     (import "python" "PyObject_IsTrue" (func $PyObject_IsTrue (param i32) (result i32)))
     (import "python" "debug_print_here" (func $here (param i32)))
-    (import "python" "Wasm_PyObject_ToBool" (func $Wasm_PyObject_ToBool (param i32) (result i32)))
 
     (func $dup (param i32) (result i32 i32)
         local.get 0
@@ -37,41 +36,18 @@
          call $PyObject_IsTrue
          if (param ) (result )
             loop (param ) (result )
-               block (param ) (result )
-                  local.get $py_0
-                  local.get $py_1
-                  i32.const 10
-                  call $Wasm_Binary_Op
-                  local.set $py_0
-                  local.get $py_1
-                  local.get $const_pool
-                  i32.const 3
-                  call $Wasm_Load_Const
-                  i32.const 5
-                  call $Wasm_Binary_Op
-                  local.set $py_1
-                  local.get $py_1
-                  local.get $const_pool
-                  i32.const 3
-                  call $Wasm_Load_Const
-                  i32.const 6
-                  call $Wasm_Binary_Op
-                  call $Wasm_PyObject_ToBool
-                  call $PyObject_IsTrue
-                  if (param ) (result )
-                     local.get $py_1
-                     local.get $const_pool
-                     i32.const 1
-                     call $Wasm_Load_Const
-                     i32.const 0
-                     call $Wasm_Binary_Op
-                     local.set $py_1
-                     br 1
-                  else
-                     br 1
-                  end
-                  unreachable
-               end
+               local.get $py_0
+               local.get $py_1
+               i32.const 10
+               call $Wasm_Binary_Op
+               local.set $py_0
+               local.get $py_1
+               local.get $const_pool
+               i32.const 3
+               call $Wasm_Load_Const
+               i32.const 5
+               call $Wasm_Binary_Op
+               local.set $py_1
                local.get $py_0
                local.get $const_pool
                i32.const 2
