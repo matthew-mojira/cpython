@@ -99,3 +99,16 @@ PyObject* Wasm_PyObject_ToBool(PyObject* obj)
     PyObject* res  = res_bool ? Py_True : Py_False;
     return res;
 }
+
+
+void Wasm_IncRef(obj)
+PyObject *obj;
+{
+    Py_INCREF(obj);
+}
+
+void Wasm_DecRef(obj)
+PyObject *obj;
+{
+    Py_DECREF(obj);
+}

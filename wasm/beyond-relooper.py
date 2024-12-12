@@ -255,13 +255,21 @@ class WasmWrapper:
                     pass
                 elif concrete_ins.opcode == _opcode.opmap["LOAD_FAST"]:
                     ins.append(WasmLocalGet(f"$py_{concrete_ins.arg}"))
+                    ins.append(WasmCall("$dup"))
+                    ins.append(WasmCall("$Wasm_IncRef"))
                 elif concrete_ins.opcode == _opcode.opmap["STORE_FAST"]:
+                    ins.append(WasmCall("$dup"))
+                    ins.append(WasmCall("$Wasm_DecRef"))
                     ins.append(WasmLocalSet(f"$py_{concrete_ins.arg}"))
                 elif concrete_ins.opcode == _opcode.opmap["LOAD_FAST_LOAD_FAST"]:
                     first = concrete_ins.arg >> 4
                     second = concrete_ins.arg & 15
                     ins.append(WasmLocalGet(f"$py_{first}"))
+                    ins.append(WasmCall("$dup"))
+                    ins.append(WasmCall("$Wasm_IncRef"))
                     ins.append(WasmLocalGet(f"$py_{second}"))
+                    ins.append(WasmCall("$dup"))
+                    ins.append(WasmCall("$Wasm_IncRef"))
                 elif concrete_ins.opcode == _opcode.opmap["BINARY_OP"]:
                     ins.append(WasmConst(concrete_ins.arg))
                     ins.append(WasmCall("$Wasm_Binary_Op"))
@@ -271,6 +279,8 @@ class WasmWrapper:
                 elif concrete_ins.opcode == _opcode.opmap["TO_BOOL"]:
                     ins.append(WasmCall("$Wasm_PyObject_ToBool"))
                 elif concrete_ins.opcode == _opcode.opmap["RETURN_VALUE"]:
+                    pass
+                elif concrete_ins.opcode == _opcode.opmap["NOP"]:
                     pass
                 else:
                     print(concrete_ins)
@@ -684,6 +694,8 @@ print("""(module
     (import "python" "PyObject_IsTrue" (func $PyObject_IsTrue (param i32) (result i32)))
     (import "python" "debug_print_here" (func $here (param i32)))
     (import "python" "Wasm_PyObject_ToBool" (func $Wasm_PyObject_ToBool (param i32) (result i32)))
+    (import "python" "Wasm_IncRef" (func $Wasm_IncRef (param i32)))
+    (import "python" "Wasm_DecRef" (func $Wasm_DecRef (param i32)))
 
     (func $dup (param i32) (result i32 i32)
         local.get 0

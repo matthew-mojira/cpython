@@ -112,3 +112,6 @@ __attribute__ ((export_name("Wasm_Get_Long"))) int Wasm_Get_Long(PyObject* num);
 
 __attribute__ ((export_name("debug_print_here"))) void debug_print_here(int num);
 
+__attribute__ ((export_name("Wasm_IncRef"))) void Wasm_IncRef(PyObject *obj);
+
+__attribute__ ((export_name("Wasm_DecRef"))) void Wasm_DecRef(PyObject *obj);
