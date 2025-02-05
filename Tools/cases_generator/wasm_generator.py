@@ -58,7 +58,8 @@ def generate_wasm(
         # out.emit(f"{mnemonic}: {instruction.properties.tier}\n")
         props = instruction.properties
         if any([props.escapes, props.error_with_pop, props.error_without_pop, props.deopts,
-                props.oparg, props.jumps, props.eval_breaker, props.ends_with_eval_breaker,
+                #props.oparg,
+                props.jumps, props.eval_breaker, props.ends_with_eval_breaker,
                 props.needs_this, props.always_exits, props.stores_sp, props.uses_co_consts,
                 props.uses_co_names,
                 #props.uses_locals,

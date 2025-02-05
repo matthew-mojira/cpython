@@ -18,6 +18,101 @@ void handler_NOP(void) {
 
 Wasm import
 
+(import "python" "handler_LOAD_FAST" (func $handler_LOAD_FAST (param i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_LOAD_FAST")))
+PyObject *handler_LOAD_FAST(int oparg);
+
+PyObject *handler_LOAD_FAST(int oparg) {
+    PyObject *value;
+
+    value = GETLOCAL(oparg);
+    assert(value != NULL);
+    Py_INCREF(value);
+
+    return value;
+}
+
+Wasm import
+
+(import "python" "handler_LOAD_FAST_AND_CLEAR" (func $handler_LOAD_FAST_AND_CLEAR (param i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_LOAD_FAST_AND_CLEAR")))
+PyObject *handler_LOAD_FAST_AND_CLEAR(int oparg);
+
+PyObject *handler_LOAD_FAST_AND_CLEAR(int oparg) {
+    PyObject *value;
+
+    value = GETLOCAL(oparg);
+    // do not use SETLOCAL here, it decrefs the old value
+    GETLOCAL(oparg) = NULL;
+
+    return value;
+}
+
+Wasm import
+
+(import "python" "handler_LOAD_FAST_LOAD_FAST" (func $handler_LOAD_FAST_LOAD_FAST (param i32) (result i32 i32)))
+
+C function
+
+
+Wasm import
+
+(import "python" "handler_STORE_FAST" (func $handler_STORE_FAST (param i32 i32) (result)))
+
+C function
+
+__attribute__ ((export_name("handler_STORE_FAST")))
+void handler_STORE_FAST(int oparg, PyObject *value);
+
+void handler_STORE_FAST(int oparg, PyObject *value) {
+    SETLOCAL(oparg, value);
+}
+
+Wasm import
+
+(import "python" "handler_STORE_FAST_LOAD_FAST" (func $handler_STORE_FAST_LOAD_FAST (param i32 i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_STORE_FAST_LOAD_FAST")))
+PyObject *handler_STORE_FAST_LOAD_FAST(int oparg, PyObject *value1);
+
+PyObject *handler_STORE_FAST_LOAD_FAST(int oparg, PyObject *value1) {
+    PyObject *value2;
+
+    uint32_t oparg1 = oparg >> 4;
+    uint32_t oparg2 = oparg & 15;
+    SETLOCAL(oparg1, value1);
+    value2 = GETLOCAL(oparg2);
+    Py_INCREF(value2);
+
+    return value2;
+}
+
+Wasm import
+
+(import "python" "handler_STORE_FAST_STORE_FAST" (func $handler_STORE_FAST_STORE_FAST (param i32 i32 i32) (result)))
+
+C function
+
+__attribute__ ((export_name("handler_STORE_FAST_STORE_FAST")))
+void handler_STORE_FAST_STORE_FAST(int oparg, PyObject *value2, PyObject *value1);
+
+void handler_STORE_FAST_STORE_FAST(int oparg, PyObject *value2, PyObject *value1) {
+    uint32_t oparg1 = oparg >> 4;
+    uint32_t oparg2 = oparg & 15;
+    SETLOCAL(oparg1, value1);
+    SETLOCAL(oparg2, value2);
+}
+
+Wasm import
+
 (import "python" "handler_POP_TOP" (func $handler_POP_TOP (param i32) (result)))
 
 C function
@@ -99,6 +194,48 @@ PyObject *handler_LOAD_ASSERTION_ERROR(void) {
 
 Wasm import
 
+(import "python" "handler_COPY_FREE_VARS" (func $handler_COPY_FREE_VARS (param i32) (result)))
+
+C function
+
+__attribute__ ((export_name("handler_COPY_FREE_VARS")))
+void handler_COPY_FREE_VARS(int oparg);
+
+void handler_COPY_FREE_VARS(int oparg) {
+    /* Copy closure variables to free variables */
+    PyCodeObject *co = _PyFrame_GetCode(frame);
+    assert(PyFunction_Check(frame->f_funcobj));
+    PyObject *closure = ((PyFunctionObject *)frame->f_funcobj)->func_closure;
+    assert(oparg == co->co_nfreevars);
+    int offset = co->co_nlocalsplus - oparg;
+    for (int i = 0; i < oparg; ++i) {
+        PyObject *o = PyTuple_GET_ITEM(closure, i);
+        frame->localsplus[offset + i] = Py_NewRef(o);
+    }
+}
+
+Wasm import
+
+(import "python" "handler_IS_OP" (func $handler_IS_OP (param i32 i32 i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_IS_OP")))
+PyObject *handler_IS_OP(int oparg, PyObject *left, PyObject *right);
+
+PyObject *handler_IS_OP(int oparg, PyObject *left, PyObject *right) {
+    PyObject *b;
+
+    int res = Py_Is(left, right) ^ oparg;
+    Py_DECREF(left);
+    Py_DECREF(right);
+    b = res ? Py_True : Py_False;
+
+    return b;
+}
+
+Wasm import
+
 (import "python" "handler_MATCH_MAPPING" (func $handler_MATCH_MAPPING (param i32) (result i32 i32)))
 
 C function
@@ -114,6 +251,20 @@ C function
 Wasm import
 
 (import "python" "handler_PUSH_EXC_INFO" (func $handler_PUSH_EXC_INFO (param i32) (result i32 i32)))
+
+C function
+
+
+Wasm import
+
+(import "python" "handler_COPY" (func $handler_COPY (param i32 i32 i32) (result i32 i32 i32)))
+
+C function
+
+
+Wasm import
+
+(import "python" "handler_SWAP" (func $handler_SWAP (param i32 i32 i32 i32) (result i32 i32 i32)))
 
 C function
 
