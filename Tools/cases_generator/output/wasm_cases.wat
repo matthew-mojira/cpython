@@ -30,8 +30,9 @@ PyObject *handler_LOAD_FAST(void) {
 
     value = GETLOCAL(oparg);
     assert(value != NULL);
-    Py_INCREF(value);return value;
+    Py_INCREF(value);
 
+    return value;
 }
 
 Wasm import
@@ -46,4 +47,53 @@ void handler_STORE_FAST(PyObject *value);
 void handler_STORE_FAST(PyObject *value) {
     value = stack_pointer[-1];
     SETLOCAL(oparg, value);
+}
+
+Wasm import
+
+(import "python" "handler_SPECIALIZE_TO_BOOL" (func $handler_SPECIALIZE_TO_BOOL (param i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_SPECIALIZE_TO_BOOL")))
+PyObject *handler_SPECIALIZE_TO_BOOL(PyObject *value);
+
+PyObject *handler_SPECIALIZE_TO_BOOL(PyObject *value) {
+    PyObject *value;
+
+    value = stack_pointer[-1];
+    uint16_t counter = read_u16(&this_instr[1].cache);
+    (void)counter;
+    #if ENABLE_SPECIALIZATION
+    if (ADAPTIVE_COUNTER_TRIGGERS(counter)) {
+        next_instr = this_instr;
+        _Py_Specialize_ToBool(value, next_instr);
+        DISPATCH_SAME_OPARG();
+    }
+    STAT_INC(TO_BOOL, deferred);
+    ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
+    #endif  /* ENABLE_SPECIALIZATION */
+
+    return value;
+}
+
+Wasm import
+
+(import "python" "handler_TO_BOOL" (func $handler_TO_BOOL (param i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_TO_BOOL")))
+PyObject *handler_TO_BOOL(PyObject *value);
+
+PyObject *handler_TO_BOOL(PyObject *value) {
+    PyObject *res;
+
+    value = stack_pointer[-1];
+    int err = PyObject_IsTrue(value);
+    Py_DECREF(value);
+    if (err < 0) goto pop_1_error;
+    res = err ? Py_True : Py_False;
+
+    return res;
 }

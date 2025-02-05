@@ -19,7 +19,7 @@ def generate_wasm(
     i = 0
 
     for mnemonic, instruction in analysis.instructions.items():
-        if mnemonic != "NOP" and mnemonic != "LOAD_FAST" and mnemonic != "STORE_FAST":
+        if mnemonic != "NOP" and mnemonic != "LOAD_FAST" and mnemonic != "STORE_FAST" and mnemonic != "TO_BOOL":
             continue
         # out.emit(f"{mnemonic}: {instruction.properties.tier}\n")
 
@@ -68,15 +68,17 @@ def generate_wasm(
                 # body
                 write_uop(part, out, 1, Stack(), instruction, False)
                 # return
+                out.emit("\n")
                 if outputs == 1:
+                    out.emit("\n")
                     output = part.stack.outputs[0]
                     out.emit(f"return {output.name};\n")
-                out.emit("\n}\n")
+                out.emit("}\n")
 
-        i += 1
-        if i > 2:
-            print("break")
-            break
+#         i += 1
+#         if i > 2:
+#             print("break")
+#             break
 
 
 arg_parser = argparse.ArgumentParser(
