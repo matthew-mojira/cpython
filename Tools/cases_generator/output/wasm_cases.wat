@@ -18,82 +18,144 @@ void handler_NOP(void) {
 
 Wasm import
 
-(import "python" "handler_LOAD_FAST" (func $handler_LOAD_FAST (param) (result i32)))
+(import "python" "handler_POP_TOP" (func $handler_POP_TOP (param i32) (result)))
 
 C function
 
-__attribute__ ((export_name("handler_LOAD_FAST")))
-PyObject *handler_LOAD_FAST(void);
+__attribute__ ((export_name("handler_POP_TOP")))
+void handler_POP_TOP(PyObject *value);
 
-PyObject *handler_LOAD_FAST(void) {
-    PyObject *value;
+void handler_POP_TOP(PyObject *value) {
+    Py_DECREF(value);
 
-    value = GETLOCAL(oparg);
-    assert(value != NULL);
-    Py_INCREF(value);
-
-    return value;
 }
 
 Wasm import
 
-(import "python" "handler_STORE_FAST" (func $handler_STORE_FAST (param i32) (result)))
+(import "python" "handler_PUSH_NULL" (func $handler_PUSH_NULL (param) (result i32)))
 
 C function
 
-__attribute__ ((export_name("handler_STORE_FAST")))
-void handler_STORE_FAST(PyObject *value);
+__attribute__ ((export_name("handler_PUSH_NULL")))
+PyObject *handler_PUSH_NULL(void);
 
-void handler_STORE_FAST(PyObject *value) {
-    value = stack_pointer[-1];
-    SETLOCAL(oparg, value);
-}
-
-Wasm import
-
-(import "python" "handler_SPECIALIZE_TO_BOOL" (func $handler_SPECIALIZE_TO_BOOL (param i32) (result i32)))
-
-C function
-
-__attribute__ ((export_name("handler_SPECIALIZE_TO_BOOL")))
-PyObject *handler_SPECIALIZE_TO_BOOL(PyObject *value);
-
-PyObject *handler_SPECIALIZE_TO_BOOL(PyObject *value) {
-    PyObject *value;
-
-    value = stack_pointer[-1];
-    uint16_t counter = read_u16(&this_instr[1].cache);
-    (void)counter;
-    #if ENABLE_SPECIALIZATION
-    if (ADAPTIVE_COUNTER_TRIGGERS(counter)) {
-        next_instr = this_instr;
-        _Py_Specialize_ToBool(value, next_instr);
-        DISPATCH_SAME_OPARG();
-    }
-    STAT_INC(TO_BOOL, deferred);
-    ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
-    #endif  /* ENABLE_SPECIALIZATION */
-
-    return value;
-}
-
-Wasm import
-
-(import "python" "handler_TO_BOOL" (func $handler_TO_BOOL (param i32) (result i32)))
-
-C function
-
-__attribute__ ((export_name("handler_TO_BOOL")))
-PyObject *handler_TO_BOOL(PyObject *value);
-
-PyObject *handler_TO_BOOL(PyObject *value) {
+PyObject *handler_PUSH_NULL(void) {
     PyObject *res;
 
-    value = stack_pointer[-1];
-    int err = PyObject_IsTrue(value);
-    Py_DECREF(value);
-    if (err < 0) goto pop_1_error;
-    res = err ? Py_True : Py_False;
+    res = NULL;
 
     return res;
+}
+
+Wasm import
+
+(import "python" "handler_END_SEND" (func $handler_END_SEND (param i32 i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_END_SEND")))
+PyObject *handler_END_SEND(PyObject *receiver, PyObject *value);
+
+PyObject *handler_END_SEND(PyObject *receiver, PyObject *value) {
+    Py_DECREF(receiver);
+
+    return value;
+}
+
+Wasm import
+
+(import "python" "handler_UNARY_NOT" (func $handler_UNARY_NOT (param i32) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_UNARY_NOT")))
+PyObject *handler_UNARY_NOT(PyObject *value);
+
+PyObject *handler_UNARY_NOT(PyObject *value) {
+    PyObject *res;
+
+    assert(PyBool_Check(value));
+    res = Py_IsFalse(value) ? Py_True : Py_False;
+
+    return res;
+}
+
+Wasm import
+
+(import "python" "handler_LOAD_ASSERTION_ERROR" (func $handler_LOAD_ASSERTION_ERROR (param) (result i32)))
+
+C function
+
+__attribute__ ((export_name("handler_LOAD_ASSERTION_ERROR")))
+PyObject *handler_LOAD_ASSERTION_ERROR(void);
+
+PyObject *handler_LOAD_ASSERTION_ERROR(void) {
+    PyObject *value;
+
+    value = Py_NewRef(PyExc_AssertionError);
+
+    return value;
+}
+
+Wasm import
+
+(import "python" "handler_MATCH_MAPPING" (func $handler_MATCH_MAPPING (param i32) (result i32 i32)))
+
+C function
+
+
+Wasm import
+
+(import "python" "handler_MATCH_SEQUENCE" (func $handler_MATCH_SEQUENCE (param i32) (result i32 i32)))
+
+C function
+
+
+Wasm import
+
+(import "python" "handler_PUSH_EXC_INFO" (func $handler_PUSH_EXC_INFO (param i32) (result i32 i32)))
+
+C function
+
+
+Wasm import
+
+(import "python" "handler_CACHE" (func $handler_CACHE (param) (result)))
+
+C function
+
+__attribute__ ((export_name("handler_CACHE")))
+void handler_CACHE(void);
+
+void handler_CACHE(void) {
+    assert(0 && "Executing a cache.");
+    Py_FatalError("Executing a cache.");
+}
+
+Wasm import
+
+(import "python" "handler_RESERVED" (func $handler_RESERVED (param) (result)))
+
+C function
+
+__attribute__ ((export_name("handler_RESERVED")))
+void handler_RESERVED(void);
+
+void handler_RESERVED(void) {
+    assert(0 && "Executing RESERVED instruction.");
+    Py_FatalError("Executing RESERVED instruction.");
+}
+
+Wasm import
+
+(import "python" "handler_POP_TOP" (func $handler_POP_TOP (param i32) (result)))
+
+C function
+
+__attribute__ ((export_name("handler_POP_TOP")))
+void handler_POP_TOP(PyObject *value);
+
+void handler_POP_TOP(PyObject *value) {
+    Py_DECREF(value);
+
 }
