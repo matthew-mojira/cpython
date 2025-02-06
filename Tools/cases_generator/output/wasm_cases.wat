@@ -2,6 +2,7 @@
 // from:
 //   Python/bytecodes.c
 // Do not edit!
+struct two_values { PyObject *first; PyObject *second; };
 
 Wasm import
 
@@ -60,6 +61,25 @@ Wasm import
 
 C function
 
+__attribute__ ((export_name("handler_LOAD_FAST_LOAD_FAST")))
+struct two_values handler_LOAD_FAST_LOAD_FAST(int oparg);
+
+struct two_values handler_LOAD_FAST_LOAD_FAST(int oparg) {
+    struct two_values two_value_return;
+    PyObject *value1;
+    PyObject *value2;
+
+    uint32_t oparg1 = oparg >> 4;
+    uint32_t oparg2 = oparg & 15;
+    value1 = GETLOCAL(oparg1);
+    value2 = GETLOCAL(oparg2);
+    Py_INCREF(value1);
+    Py_INCREF(value2);
+
+    two_value_return.first = value1;
+    two_value_return.second = value2;
+    return two_value_return;
+}
 
 Wasm import
 
@@ -240,6 +260,20 @@ Wasm import
 
 C function
 
+__attribute__ ((export_name("handler_MATCH_MAPPING")))
+struct two_values handler_MATCH_MAPPING(PyObject *subject);
+
+struct two_values handler_MATCH_MAPPING(PyObject *subject) {
+    struct two_values two_value_return;
+    PyObject *res;
+
+    int match = Py_TYPE(subject)->tp_flags & Py_TPFLAGS_MAPPING;
+    res = match ? Py_True : Py_False;
+
+    two_value_return.first = subject;
+    two_value_return.second = res;
+    return two_value_return;
+}
 
 Wasm import
 
@@ -247,6 +281,20 @@ Wasm import
 
 C function
 
+__attribute__ ((export_name("handler_MATCH_SEQUENCE")))
+struct two_values handler_MATCH_SEQUENCE(PyObject *subject);
+
+struct two_values handler_MATCH_SEQUENCE(PyObject *subject) {
+    struct two_values two_value_return;
+    PyObject *res;
+
+    int match = Py_TYPE(subject)->tp_flags & Py_TPFLAGS_SEQUENCE;
+    res = match ? Py_True : Py_False;
+
+    two_value_return.first = subject;
+    two_value_return.second = res;
+    return two_value_return;
+}
 
 Wasm import
 
@@ -254,6 +302,27 @@ Wasm import
 
 C function
 
+__attribute__ ((export_name("handler_PUSH_EXC_INFO")))
+struct two_values handler_PUSH_EXC_INFO(PyObject *new_exc);
+
+struct two_values handler_PUSH_EXC_INFO(PyObject *new_exc) {
+    struct two_values two_value_return;
+    PyObject *prev_exc;
+
+    _PyErr_StackItem *exc_info = tstate->exc_info;
+    if (exc_info->exc_value != NULL) {
+        prev_exc = exc_info->exc_value;
+    }
+    else {
+        prev_exc = Py_None;
+    }
+    assert(PyExceptionInstance_Check(new_exc));
+    exc_info->exc_value = Py_NewRef(new_exc);
+
+    two_value_return.first = prev_exc;
+    two_value_return.second = new_exc;
+    return two_value_return;
+}
 
 Wasm import
 

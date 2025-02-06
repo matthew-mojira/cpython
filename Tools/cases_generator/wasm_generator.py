@@ -54,6 +54,9 @@ def generate_wasm(
 
     i = 0
 
+    # emit struct definition for two values
+    out.emit("struct two_values { PyObject *first; PyObject *second; };\n")
+
     for mnemonic, instruction in analysis.instructions.items():
         # out.emit(f"{mnemonic}: {instruction.properties.tier}\n")
         props = instruction.properties
@@ -80,14 +83,17 @@ def generate_wasm(
             out.emit("\nC function\n\n")
             decl = ""
             # output type
-            if outputs > 1:
-                print("Skipping", mnemonic)
-                continue
-            if outputs == 0:
-                decl += "void "
-            else:
-                output = part.stack.outputs[0]
-                decl += "PyObject *" if output.type is None or output.type == "" else output.type
+            match outputs:
+                case 2:
+                    decl += "struct two_values "
+                case 1:
+                    output = part.stack.outputs[0]
+                    decl += "PyObject *" if output.type is None or output.type == "" else output.type
+                case 0:
+                    decl += "void "
+                case _:
+                    print("Skipping", mnemonic)
+                    continue
             # name
             decl += f"handler{part.name}("
             # params
@@ -113,7 +119,15 @@ def generate_wasm(
             out.emit(decl);
             out.emit(" {\n");
             # define return value if need one
-            if outputs == 1:
+            if outputs == 2:
+                out.emit("struct two_values two_value_return;\n")
+                for i in range(2):
+                    output = part.stack.outputs[i]
+                    if not any(e.name == output.name for e in part.stack.inputs):
+                        # do not emit return variable declaration if it is already a parameter
+                        out.emit(f'{"PyObject *" if output.type is None or output.type == "" else output.type}{output.name};\n')
+                out.emit("\n")
+            elif outputs == 1:
                 output = part.stack.outputs[0]
                 if not any(e.name == output.name for e in part.stack.inputs):
                     # do not emit return variable declaration if it is already a parameter
@@ -126,6 +140,11 @@ def generate_wasm(
                 out.emit("\n")
                 output = part.stack.outputs[0]
                 out.emit(f"return {output.name};\n")
+            elif outputs == 2:
+                out.emit("\n")
+                out.emit(f"two_value_return.first = {part.stack.outputs[0].name};\n")
+                out.emit(f"two_value_return.second = {part.stack.outputs[1].name};\n")
+                out.emit("return two_value_return;\n")
             out.emit("}\n")
 
 #         i += 1
