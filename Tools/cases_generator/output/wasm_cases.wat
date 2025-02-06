@@ -4,6 +4,30 @@
 // Do not edit!
 struct two_values { PyObject *first; PyObject *second; };
 
+------------------------
+OPCODE: NOP
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: False
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
+
 Wasm import
 
 (import "python" "handler_NOP" (func $handler_NOP (param) (result)))
@@ -14,8 +38,37 @@ __attribute__ ((export_name("handler_NOP")))
 void handler_NOP(void);
 
 void handler_NOP(void) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
 
+
+
+    // (matthew) begin return
 }
+
+------------------------
+OPCODE: LOAD_FAST
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: True
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: True
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -27,109 +80,41 @@ __attribute__ ((export_name("handler_LOAD_FAST")))
 PyObject *handler_LOAD_FAST(int oparg);
 
 PyObject *handler_LOAD_FAST(int oparg) {
+    // (matthew) begin emitting space for return
     PyObject *value;
+    // (matthew) end emitting space for return
 
     value = GETLOCAL(oparg);
     assert(value != NULL);
     Py_INCREF(value);
 
+    // (matthew) begin return
     return value;
 }
 
-Wasm import
-
-(import "python" "handler_LOAD_FAST_AND_CLEAR" (func $handler_LOAD_FAST_AND_CLEAR (param i32) (result i32)))
-
-C function
-
-__attribute__ ((export_name("handler_LOAD_FAST_AND_CLEAR")))
-PyObject *handler_LOAD_FAST_AND_CLEAR(int oparg);
-
-PyObject *handler_LOAD_FAST_AND_CLEAR(int oparg) {
-    PyObject *value;
-
-    value = GETLOCAL(oparg);
-    // do not use SETLOCAL here, it decrefs the old value
-    GETLOCAL(oparg) = NULL;
-
-    return value;
-}
-
-Wasm import
-
-(import "python" "handler_LOAD_FAST_LOAD_FAST" (func $handler_LOAD_FAST_LOAD_FAST (param i32) (result i32 i32)))
-
-C function
-
-__attribute__ ((export_name("handler_LOAD_FAST_LOAD_FAST")))
-struct two_values handler_LOAD_FAST_LOAD_FAST(int oparg);
-
-struct two_values handler_LOAD_FAST_LOAD_FAST(int oparg) {
-    struct two_values two_value_return;
-    PyObject *value1;
-    PyObject *value2;
-
-    uint32_t oparg1 = oparg >> 4;
-    uint32_t oparg2 = oparg & 15;
-    value1 = GETLOCAL(oparg1);
-    value2 = GETLOCAL(oparg2);
-    Py_INCREF(value1);
-    Py_INCREF(value2);
-
-    two_value_return.first = value1;
-    two_value_return.second = value2;
-    return two_value_return;
-}
-
-Wasm import
-
-(import "python" "handler_STORE_FAST" (func $handler_STORE_FAST (param i32 i32) (result)))
-
-C function
-
-__attribute__ ((export_name("handler_STORE_FAST")))
-void handler_STORE_FAST(int oparg, PyObject *value);
-
-void handler_STORE_FAST(int oparg, PyObject *value) {
-    SETLOCAL(oparg, value);
-}
-
-Wasm import
-
-(import "python" "handler_STORE_FAST_LOAD_FAST" (func $handler_STORE_FAST_LOAD_FAST (param i32 i32) (result i32)))
-
-C function
-
-__attribute__ ((export_name("handler_STORE_FAST_LOAD_FAST")))
-PyObject *handler_STORE_FAST_LOAD_FAST(int oparg, PyObject *value1);
-
-PyObject *handler_STORE_FAST_LOAD_FAST(int oparg, PyObject *value1) {
-    PyObject *value2;
-
-    uint32_t oparg1 = oparg >> 4;
-    uint32_t oparg2 = oparg & 15;
-    SETLOCAL(oparg1, value1);
-    value2 = GETLOCAL(oparg2);
-    Py_INCREF(value2);
-
-    return value2;
-}
-
-Wasm import
-
-(import "python" "handler_STORE_FAST_STORE_FAST" (func $handler_STORE_FAST_STORE_FAST (param i32 i32 i32) (result)))
-
-C function
-
-__attribute__ ((export_name("handler_STORE_FAST_STORE_FAST")))
-void handler_STORE_FAST_STORE_FAST(int oparg, PyObject *value2, PyObject *value1);
-
-void handler_STORE_FAST_STORE_FAST(int oparg, PyObject *value2, PyObject *value1) {
-    uint32_t oparg1 = oparg >> 4;
-    uint32_t oparg2 = oparg & 15;
-    SETLOCAL(oparg1, value1);
-    SETLOCAL(oparg2, value2);
-}
+------------------------
+OPCODE: POP_TOP
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: False
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -141,9 +126,38 @@ __attribute__ ((export_name("handler_POP_TOP")))
 void handler_POP_TOP(PyObject *value);
 
 void handler_POP_TOP(PyObject *value) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
     Py_DECREF(value);
 
+
+    // (matthew) begin return
 }
+
+------------------------
+OPCODE: PUSH_NULL
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: False
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -155,12 +169,39 @@ __attribute__ ((export_name("handler_PUSH_NULL")))
 PyObject *handler_PUSH_NULL(void);
 
 PyObject *handler_PUSH_NULL(void) {
+    // (matthew) begin emitting space for return
     PyObject *res;
+    // (matthew) end emitting space for return
 
     res = NULL;
 
+    // (matthew) begin return
     return res;
 }
+
+------------------------
+OPCODE: END_SEND
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: False
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -172,10 +213,38 @@ __attribute__ ((export_name("handler_END_SEND")))
 PyObject *handler_END_SEND(PyObject *receiver, PyObject *value);
 
 PyObject *handler_END_SEND(PyObject *receiver, PyObject *value) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
     Py_DECREF(receiver);
 
+    // (matthew) begin return
     return value;
 }
+
+------------------------
+OPCODE: UNARY_NOT
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: False
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -187,142 +256,40 @@ __attribute__ ((export_name("handler_UNARY_NOT")))
 PyObject *handler_UNARY_NOT(PyObject *value);
 
 PyObject *handler_UNARY_NOT(PyObject *value) {
+    // (matthew) begin emitting space for return
     PyObject *res;
+    // (matthew) end emitting space for return
 
     assert(PyBool_Check(value));
     res = Py_IsFalse(value) ? Py_True : Py_False;
 
+    // (matthew) begin return
     return res;
 }
 
-Wasm import
-
-(import "python" "handler_LOAD_ASSERTION_ERROR" (func $handler_LOAD_ASSERTION_ERROR (param) (result i32)))
-
-C function
-
-__attribute__ ((export_name("handler_LOAD_ASSERTION_ERROR")))
-PyObject *handler_LOAD_ASSERTION_ERROR(void);
-
-PyObject *handler_LOAD_ASSERTION_ERROR(void) {
-    PyObject *value;
-
-    value = Py_NewRef(PyExc_AssertionError);
-
-    return value;
-}
-
-Wasm import
-
-(import "python" "handler_COPY_FREE_VARS" (func $handler_COPY_FREE_VARS (param i32) (result)))
-
-C function
-
-__attribute__ ((export_name("handler_COPY_FREE_VARS")))
-void handler_COPY_FREE_VARS(int oparg);
-
-void handler_COPY_FREE_VARS(int oparg) {
-    /* Copy closure variables to free variables */
-    PyCodeObject *co = _PyFrame_GetCode(frame);
-    assert(PyFunction_Check(frame->f_funcobj));
-    PyObject *closure = ((PyFunctionObject *)frame->f_funcobj)->func_closure;
-    assert(oparg == co->co_nfreevars);
-    int offset = co->co_nlocalsplus - oparg;
-    for (int i = 0; i < oparg; ++i) {
-        PyObject *o = PyTuple_GET_ITEM(closure, i);
-        frame->localsplus[offset + i] = Py_NewRef(o);
-    }
-}
-
-Wasm import
-
-(import "python" "handler_IS_OP" (func $handler_IS_OP (param i32 i32 i32) (result i32)))
-
-C function
-
-__attribute__ ((export_name("handler_IS_OP")))
-PyObject *handler_IS_OP(int oparg, PyObject *left, PyObject *right);
-
-PyObject *handler_IS_OP(int oparg, PyObject *left, PyObject *right) {
-    PyObject *b;
-
-    int res = Py_Is(left, right) ^ oparg;
-    Py_DECREF(left);
-    Py_DECREF(right);
-    b = res ? Py_True : Py_False;
-
-    return b;
-}
-
-Wasm import
-
-(import "python" "handler_MATCH_MAPPING" (func $handler_MATCH_MAPPING (param i32) (result i32 i32)))
-
-C function
-
-__attribute__ ((export_name("handler_MATCH_MAPPING")))
-struct two_values handler_MATCH_MAPPING(PyObject *subject);
-
-struct two_values handler_MATCH_MAPPING(PyObject *subject) {
-    struct two_values two_value_return;
-    PyObject *res;
-
-    int match = Py_TYPE(subject)->tp_flags & Py_TPFLAGS_MAPPING;
-    res = match ? Py_True : Py_False;
-
-    two_value_return.first = subject;
-    two_value_return.second = res;
-    return two_value_return;
-}
-
-Wasm import
-
-(import "python" "handler_MATCH_SEQUENCE" (func $handler_MATCH_SEQUENCE (param i32) (result i32 i32)))
-
-C function
-
-__attribute__ ((export_name("handler_MATCH_SEQUENCE")))
-struct two_values handler_MATCH_SEQUENCE(PyObject *subject);
-
-struct two_values handler_MATCH_SEQUENCE(PyObject *subject) {
-    struct two_values two_value_return;
-    PyObject *res;
-
-    int match = Py_TYPE(subject)->tp_flags & Py_TPFLAGS_SEQUENCE;
-    res = match ? Py_True : Py_False;
-
-    two_value_return.first = subject;
-    two_value_return.second = res;
-    return two_value_return;
-}
-
-Wasm import
-
-(import "python" "handler_PUSH_EXC_INFO" (func $handler_PUSH_EXC_INFO (param i32) (result i32 i32)))
-
-C function
-
-__attribute__ ((export_name("handler_PUSH_EXC_INFO")))
-struct two_values handler_PUSH_EXC_INFO(PyObject *new_exc);
-
-struct two_values handler_PUSH_EXC_INFO(PyObject *new_exc) {
-    struct two_values two_value_return;
-    PyObject *prev_exc;
-
-    _PyErr_StackItem *exc_info = tstate->exc_info;
-    if (exc_info->exc_value != NULL) {
-        prev_exc = exc_info->exc_value;
-    }
-    else {
-        prev_exc = Py_None;
-    }
-    assert(PyExceptionInstance_Check(new_exc));
-    exc_info->exc_value = Py_NewRef(new_exc);
-
-    two_value_return.first = prev_exc;
-    two_value_return.second = new_exc;
-    return two_value_return;
-}
+------------------------
+OPCODE: COPY
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: True
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -330,6 +297,31 @@ Wasm import
 
 C function
 
+>>#!@#@! SKIPPING because there are more than 2 outputs
+
+------------------------
+OPCODE: SWAP
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: True
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -337,34 +329,31 @@ Wasm import
 
 C function
 
+>>#!@#@! SKIPPING because there are more than 2 outputs
 
-Wasm import
-
-(import "python" "handler_CACHE" (func $handler_CACHE (param) (result)))
-
-C function
-
-__attribute__ ((export_name("handler_CACHE")))
-void handler_CACHE(void);
-
-void handler_CACHE(void) {
-    assert(0 && "Executing a cache.");
-    Py_FatalError("Executing a cache.");
-}
-
-Wasm import
-
-(import "python" "handler_RESERVED" (func $handler_RESERVED (param) (result)))
-
-C function
-
-__attribute__ ((export_name("handler_RESERVED")))
-void handler_RESERVED(void);
-
-void handler_RESERVED(void) {
-    assert(0 && "Executing RESERVED instruction.");
-    Py_FatalError("Executing RESERVED instruction.");
-}
+------------------------
+OPCODE: END_FOR
+PROPERTIES:
+   escapes: False
+   error_with_pop: False
+   error_without_pop: False
+   deopts: False
+   oparg: False
+   jumps: False
+   eval_breaker: False
+   ends_with_eval_breaker: False
+   needs_this: False
+   always_exits: False
+   stores_sp: False
+   uses_co_consts: False
+   uses_co_names: False
+   uses_locals: False
+   has_free: False
+   side_exit: False
+   pure: True
+   tier: None
+   oparg_and_1: False
+   const_oparg: -1
 
 Wasm import
 
@@ -376,6 +365,11 @@ __attribute__ ((export_name("handler_POP_TOP")))
 void handler_POP_TOP(PyObject *value);
 
 void handler_POP_TOP(PyObject *value) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
     Py_DECREF(value);
 
+
+    // (matthew) begin return
 }

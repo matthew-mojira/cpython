@@ -53,6 +53,7 @@ def generate_wasm(
     out = CWriter(outfile, 0, False)
 
     i = 0
+    bytecodes = 0
 
     # emit struct definition for two values
     out.emit("struct two_values { PyObject *first; PyObject *second; };\n")
@@ -66,9 +67,19 @@ def generate_wasm(
                 props.needs_this, props.always_exits, props.stores_sp, props.uses_co_consts,
                 props.uses_co_names,
                 #props.uses_locals,
+                not props.pure,
                 props.has_free, props.side_exit,
                 props.oparg_and_1, props.const_oparg != -1]):
+            bytecodes += 1
             continue
+
+        out.emit("\n------------------------\n")
+
+        out.emit(f"OPCODE: {mnemonic}\n")
+        out.emit("PROPERTIES:\n")
+
+        for (key, value) in props.__dict__.items():
+            out.emit(f"   {key}: {value}\n")
 
         for part in instruction.parts:
             # Uop or skip, assume Uop
@@ -77,6 +88,7 @@ def generate_wasm(
 
             inputs = len(part.stack.inputs) + part.properties.oparg
             outputs = len(part.stack.outputs)
+
             out.emit("\nWasm import\n\n")
             out.emit(f'(import "python" "handler{part.name}" (func $handler{part.name} (param{' i32' * inputs}) (result{' i32' * outputs})))\n')
 
@@ -93,6 +105,7 @@ def generate_wasm(
                     decl += "void "
                 case _:
                     print("Skipping", mnemonic)
+                    out.emit(">>#!@#@! SKIPPING because there are more than 2 outputs\n")
                     continue
             # name
             decl += f"handler{part.name}("
@@ -119,6 +132,7 @@ def generate_wasm(
             out.emit(decl);
             out.emit(" {\n");
             # define return value if need one
+            out.emit("// (matthew) begin emitting space for return\n")
             if outputs == 2:
                 out.emit("struct two_values two_value_return;\n")
                 for i in range(2):
@@ -126,22 +140,21 @@ def generate_wasm(
                     if not any(e.name == output.name for e in part.stack.inputs):
                         # do not emit return variable declaration if it is already a parameter
                         out.emit(f'{"PyObject *" if output.type is None or output.type == "" else output.type}{output.name};\n')
-                out.emit("\n")
             elif outputs == 1:
                 output = part.stack.outputs[0]
                 if not any(e.name == output.name for e in part.stack.inputs):
                     # do not emit return variable declaration if it is already a parameter
-                    out.emit(f'{"PyObject *" if output.type is None or output.type == "" else output.type}{output.name};\n\n')
+                    out.emit(f'{"PyObject *" if output.type is None or output.type == "" else output.type}{output.name};\n')
+            out.emit("// (matthew) end emitting space for return\n\n")
             # body
             write_uop(part, out, 1, instruction, False)
             # return
-            out.emit("\n")
+            out.emit("\n\n")
+            out.emit("// (matthew) begin return\n")
             if outputs == 1:
-                out.emit("\n")
                 output = part.stack.outputs[0]
                 out.emit(f"return {output.name};\n")
             elif outputs == 2:
-                out.emit("\n")
                 out.emit(f"two_value_return.first = {part.stack.outputs[0].name};\n")
                 out.emit(f"two_value_return.second = {part.stack.outputs[1].name};\n")
                 out.emit("return two_value_return;\n")
@@ -151,6 +164,7 @@ def generate_wasm(
 #         if i > 2:
 #             print("break")
 #             break
+    print("Failed to translate at least", bytecodes, "of", len(analysis.instructions), "bytecodes")
 
 
 arg_parser = argparse.ArgumentParser(
