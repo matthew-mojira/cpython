@@ -5,7 +5,7 @@ from cwriter import CWriter
 from typing import TextIO
 from stack import Stack
 
-DEFAULT_OUTPUT = ROOT / "Tools/cases_generator/output/wasm_cases.wat"
+DEFAULT_OUTPUT = ROOT / "Tools/cases_generator/output/wasm_cases.c"
 
 def write_uop(
         uop: Uop, out: CWriter, offset: int, inst: Instruction, braces: bool
@@ -56,6 +56,7 @@ def generate_wasm(
     bytecodes = 0
 
     # emit struct definition for two values
+    out.emit("\n")
     out.emit("struct two_values { PyObject *first; PyObject *second; };\n")
 
     for mnemonic, instruction in analysis.instructions.items():
@@ -73,13 +74,12 @@ def generate_wasm(
             bytecodes += 1
             continue
 
-        out.emit("\n------------------------\n")
-
-        out.emit(f"OPCODE: {mnemonic}\n")
-        out.emit("PROPERTIES:\n")
-
+        out.emit("\n/* ------------------------\n")
+        out.emit(f" * OPCODE: {mnemonic}\n")
+        out.emit(" * PROPERTIES:\n")
         for (key, value) in props.__dict__.items():
-            out.emit(f"   {key}: {value}\n")
+            out.emit(f" *   {key}: {value}\n")
+        out.emit(" */\n")
 
         for part in instruction.parts:
             # Uop or skip, assume Uop
@@ -89,10 +89,10 @@ def generate_wasm(
             inputs = len(part.stack.inputs) + part.properties.oparg
             outputs = len(part.stack.outputs)
 
-            out.emit("\nWasm import\n\n")
-            out.emit(f'(import "python" "handler{part.name}" (func $handler{part.name} (param{' i32' * inputs}) (result{' i32' * outputs})))\n')
+            out.emit("\n")
+            out.emit(f'// (import "python" "handler{part.name}" (func $handler{part.name} (param{' i32' * inputs}) (result{' i32' * outputs})))\n')
+            out.emit("\n")
 
-            out.emit("\nC function\n\n")
             decl = ""
             # output type
             match outputs:
