@@ -29,6 +29,7 @@ struct two_values { PyObject *first; PyObject *second; };
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_NOP" (func $handler_NOP (param) (result)))
 
@@ -42,6 +43,187 @@ void handler_NOP(void) {
 
 
     // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: RESUME
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: True
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_RESUME" (func $handler_RESUME (param i32) (result)))
+
+__attribute__ ((export_name("handler_RESUME")))
+void handler_RESUME(int oparg);
+
+void handler_RESUME(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(frame == tstate->current_frame);
+    if (tstate->tracing == 0) {
+        uintptr_t global_version =
+        _Py_atomic_load_uintptr_relaxed(&tstate->eval_breaker) &
+        ~_PY_EVAL_EVENTS_MASK;
+        PyCodeObject* code = _PyFrame_GetCode(frame);
+        uintptr_t code_version = FT_ATOMIC_LOAD_UINTPTR_ACQUIRE(code->_co_instrumentation_version);
+        assert((code_version & 255) == 0);
+        if (code_version != global_version) {
+            int err = _Py_Instrument(_PyFrame_GetCode(frame), tstate->interp);
+            assert(err); // (matthew) replace error with assertion
+            next_instr = this_instr;
+            DISPATCH();
+        }
+        assert(this_instr->op.code == RESUME ||
+                       this_instr->op.code == RESUME_CHECK ||
+                       this_instr->op.code == INSTRUMENTED_RESUME ||
+                       this_instr->op.code == ENTER_EXECUTOR);
+        if (this_instr->op.code == RESUME) {
+            #if ENABLE_SPECIALIZATION
+            FT_ATOMIC_STORE_UINT8_RELAXED(this_instr->op.code, RESUME_CHECK);
+            #endif  /* ENABLE_SPECIALIZATION */
+        }
+    }
+    if ((oparg & RESUME_OPARG_LOCATION_MASK) < RESUME_AFTER_YIELD_FROM) {
+        CHECK_EVAL_BREAKER();
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_RESUME
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: True
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_RESUME" (func $handler_INSTRUMENTED_RESUME (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_RESUME")))
+void handler_INSTRUMENTED_RESUME(int oparg);
+
+void handler_INSTRUMENTED_RESUME(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    uintptr_t global_version = _Py_atomic_load_uintptr_relaxed(&tstate->eval_breaker) & ~_PY_EVAL_EVENTS_MASK;
+    uintptr_t code_version = FT_ATOMIC_LOAD_UINTPTR_ACQUIRE(_PyFrame_GetCode(frame)->_co_instrumentation_version);
+    if (code_version != global_version && tstate->tracing == 0) {
+        if (_Py_Instrument(_PyFrame_GetCode(frame), tstate->interp)) {
+            ERROR_NO_POP();
+        }
+        next_instr = this_instr;
+    }
+    else {
+        if ((oparg & RESUME_OPARG_LOCATION_MASK) < RESUME_AFTER_YIELD_FROM) {
+            CHECK_EVAL_BREAKER();
+        }
+        _PyFrame_SetStackPointer(frame, stack_pointer);
+        int err = _Py_call_instrumentation(
+            tstate, oparg > 0, frame, this_instr);
+        stack_pointer = _PyFrame_GetStackPointer(frame);
+        assert(err); // (matthew) replace error with assertion
+        if (frame->instr_ptr != this_instr) {
+            /* Instrumentation has jumped */
+            next_instr = frame->instr_ptr;
+            DISPATCH();
+        }
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: LOAD_FAST_CHECK
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: True
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_FAST_CHECK" (func $handler_LOAD_FAST_CHECK (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_FAST_CHECK")))
+PyObject *handler_LOAD_FAST_CHECK(int oparg);
+
+PyObject *handler_LOAD_FAST_CHECK(int oparg) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    value = GETLOCAL(oparg);
+    if (value == NULL) {
+        _PyEval_FormatExcCheckArg(tstate, PyExc_UnboundLocalError,
+            UNBOUNDLOCAL_ERROR_MSG,
+            PyTuple_GetItem(_PyFrame_GetCode(frame)->co_localsplusnames, oparg)
+        );
+        assert(1); // (matthew) replace error with assertion
+    }
+    Py_INCREF(value);
+
+    // (matthew) begin return
+    return value;
 }
 
 /* ------------------------
@@ -68,6 +250,7 @@ void handler_NOP(void) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_LOAD_FAST" (func $handler_LOAD_FAST (param i32) (result i32)))
 
@@ -85,6 +268,279 @@ PyObject *handler_LOAD_FAST(int oparg) {
 
     // (matthew) begin return
     return value;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_FAST_AND_CLEAR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: True
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_FAST_AND_CLEAR" (func $handler_LOAD_FAST_AND_CLEAR (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_FAST_AND_CLEAR")))
+PyObject *handler_LOAD_FAST_AND_CLEAR(int oparg);
+
+PyObject *handler_LOAD_FAST_AND_CLEAR(int oparg) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    value = GETLOCAL(oparg);
+    // do not use SETLOCAL here, it decrefs the old value
+    GETLOCAL(oparg) = NULL;
+
+    // (matthew) begin return
+    return value;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_FAST_LOAD_FAST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: True
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_FAST_LOAD_FAST" (func $handler_LOAD_FAST_LOAD_FAST (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_LOAD_FAST_LOAD_FAST")))
+struct two_values handler_LOAD_FAST_LOAD_FAST(int oparg);
+
+struct two_values handler_LOAD_FAST_LOAD_FAST(int oparg) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *value1;
+    PyObject *value2;
+    // (matthew) end emitting space for return
+
+    uint32_t oparg1 = oparg >> 4;
+    uint32_t oparg2 = oparg & 15;
+    value1 = GETLOCAL(oparg1);
+    value2 = GETLOCAL(oparg2);
+    Py_INCREF(value1);
+    Py_INCREF(value2);
+
+    // (matthew) begin return
+    two_value_return.first = value1;
+    two_value_return.second = value2;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_CONST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: True
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: True
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_CONST" (func $handler_LOAD_CONST (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_CONST")))
+PyObject *handler_LOAD_CONST(int oparg);
+
+PyObject *handler_LOAD_CONST(int oparg) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    value = GETITEM(FRAME_CO_CONSTS, oparg);
+    Py_INCREF(value);
+
+    // (matthew) begin return
+    return value;
+}
+
+/* ------------------------
+ * OPCODE: STORE_FAST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: True
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_STORE_FAST" (func $handler_STORE_FAST (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_FAST")))
+void handler_STORE_FAST(int oparg, PyObject *value);
+
+void handler_STORE_FAST(int oparg, PyObject *value) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    SETLOCAL(oparg, value);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: STORE_FAST_LOAD_FAST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: True
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_STORE_FAST_LOAD_FAST" (func $handler_STORE_FAST_LOAD_FAST (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_STORE_FAST_LOAD_FAST")))
+PyObject *handler_STORE_FAST_LOAD_FAST(int oparg, PyObject *value1);
+
+PyObject *handler_STORE_FAST_LOAD_FAST(int oparg, PyObject *value1) {
+    // (matthew) begin emitting space for return
+    PyObject *value2;
+    // (matthew) end emitting space for return
+
+    uint32_t oparg1 = oparg >> 4;
+    uint32_t oparg2 = oparg & 15;
+    SETLOCAL(oparg1, value1);
+    value2 = GETLOCAL(oparg2);
+    Py_INCREF(value2);
+
+    // (matthew) begin return
+    return value2;
+}
+
+/* ------------------------
+ * OPCODE: STORE_FAST_STORE_FAST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: True
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_STORE_FAST_STORE_FAST" (func $handler_STORE_FAST_STORE_FAST (param i32 i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_FAST_STORE_FAST")))
+void handler_STORE_FAST_STORE_FAST(int oparg, PyObject *value2, PyObject *value1);
+
+void handler_STORE_FAST_STORE_FAST(int oparg, PyObject *value2, PyObject *value1) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    uint32_t oparg1 = oparg >> 4;
+    uint32_t oparg2 = oparg & 15;
+    SETLOCAL(oparg1, value1);
+    SETLOCAL(oparg2, value2);
+
+    // (matthew) begin return
 }
 
 /* ------------------------
@@ -111,6 +567,7 @@ PyObject *handler_LOAD_FAST(int oparg) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_POP_TOP" (func $handler_POP_TOP (param i32) (result)))
 
@@ -151,6 +608,7 @@ void handler_POP_TOP(PyObject *value) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_PUSH_NULL" (func $handler_PUSH_NULL (param) (result i32)))
 
@@ -166,6 +624,56 @@ PyObject *handler_PUSH_NULL(void) {
 
     // (matthew) begin return
     return res;
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_END_FOR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_END_FOR" (func $handler_INSTRUMENTED_END_FOR (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_END_FOR")))
+PyObject *handler_INSTRUMENTED_END_FOR(PyObject *receiver, PyObject *value);
+
+PyObject *handler_INSTRUMENTED_END_FOR(PyObject *receiver, PyObject *value) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    /* Need to create a fake StopIteration error here,
+     * to conform to PEP 380 */
+    if (PyGen_Check(receiver)) {
+        if (monitor_stop_iteration(tstate, frame, this_instr, value)) {
+            ERROR_NO_POP();
+        }
+    }
+    Py_DECREF(value);
+
+
+    // (matthew) begin return
+    return receiver;
 }
 
 /* ------------------------
@@ -192,6 +700,7 @@ PyObject *handler_PUSH_NULL(void) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_END_SEND" (func $handler_END_SEND (param i32 i32) (result i32)))
 
@@ -206,6 +715,99 @@ PyObject *handler_END_SEND(PyObject *receiver, PyObject *value) {
 
     // (matthew) begin return
     return value;
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_END_SEND
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_END_SEND" (func $handler_INSTRUMENTED_END_SEND (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_END_SEND")))
+PyObject *handler_INSTRUMENTED_END_SEND(PyObject *receiver, PyObject *value);
+
+PyObject *handler_INSTRUMENTED_END_SEND(PyObject *receiver, PyObject *value) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    if (PyGen_Check(receiver) || PyCoro_CheckExact(receiver)) {
+        if (monitor_stop_iteration(tstate, frame, this_instr, value)) {
+            ERROR_NO_POP();
+        }
+    }
+    Py_DECREF(receiver);
+
+    // (matthew) begin return
+    return value;
+}
+
+/* ------------------------
+ * OPCODE: UNARY_NEGATIVE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_UNARY_NEGATIVE" (func $handler_UNARY_NEGATIVE (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_UNARY_NEGATIVE")))
+PyObject *handler_UNARY_NEGATIVE(PyObject *value);
+
+PyObject *handler_UNARY_NEGATIVE(PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    res = PyNumber_Negative(value);
+    Py_DECREF(value);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
 }
 
 /* ------------------------
@@ -232,6 +834,7 @@ PyObject *handler_END_SEND(PyObject *receiver, PyObject *value) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_UNARY_NOT" (func $handler_UNARY_NOT (param i32) (result i32)))
 
@@ -245,6 +848,4665 @@ PyObject *handler_UNARY_NOT(PyObject *value) {
 
     assert(PyBool_Check(value));
     res = Py_IsFalse(value) ? Py_True : Py_False;
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: UNARY_INVERT
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_UNARY_INVERT" (func $handler_UNARY_INVERT (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_UNARY_INVERT")))
+PyObject *handler_UNARY_INVERT(PyObject *value);
+
+PyObject *handler_UNARY_INVERT(PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    res = PyNumber_Invert(value);
+    Py_DECREF(value);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: BINARY_SLICE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BINARY_SLICE" (func $handler_BINARY_SLICE (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BINARY_SLICE")))
+PyObject *handler_BINARY_SLICE(PyObject *container, PyObject *start, PyObject *stop);
+
+PyObject *handler_BINARY_SLICE(PyObject *container, PyObject *start, PyObject *stop) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    PyObject *slice = _PyBuildSlice_ConsumeRefs(start, stop);
+    // Can't use ERROR_IF() here, because we haven't
+    // DECREF'ed container yet, and we still own slice.
+    if (slice == NULL) {
+        res = NULL;
+    }
+    else {
+        res = PyObject_GetItem(container, slice);
+        Py_DECREF(slice);
+    }
+    Py_DECREF(container);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: STORE_SLICE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_STORE_SLICE" (func $handler_STORE_SLICE (param i32 i32 i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_SLICE")))
+void handler_STORE_SLICE(PyObject *v, PyObject *container, PyObject *start, PyObject *stop);
+
+void handler_STORE_SLICE(PyObject *v, PyObject *container, PyObject *start, PyObject *stop) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *slice = _PyBuildSlice_ConsumeRefs(start, stop);
+    int err;
+    if (slice == NULL) {
+        err = 1;
+    }
+    else {
+        err = PyObject_SetItem(container, slice, v);
+        Py_DECREF(slice);
+    }
+    Py_DECREF(v);
+    Py_DECREF(container);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: LIST_APPEND
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LIST_APPEND" (func $handler_LIST_APPEND (param i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_LIST_APPEND")))
+struct two_values handler_LIST_APPEND(int oparg, PyObject *list, PyObject **unused, PyObject *v);
+
+struct two_values handler_LIST_APPEND(int oparg, PyObject *list, PyObject **unused, PyObject *v) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    // (matthew) end emitting space for return
+
+    assert(_PyList_AppendTakeRef((PyListObject *)list, v) < 0); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    two_value_return.first = list;
+    two_value_return.second = unused;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: SET_ADD
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_SET_ADD" (func $handler_SET_ADD (param i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_SET_ADD")))
+struct two_values handler_SET_ADD(int oparg, PyObject *set, PyObject **unused, PyObject *v);
+
+struct two_values handler_SET_ADD(int oparg, PyObject *set, PyObject **unused, PyObject *v) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    // (matthew) end emitting space for return
+
+    int err = PySet_Add(set, v);
+    Py_DECREF(v);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    two_value_return.first = set;
+    two_value_return.second = unused;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: DELETE_SUBSCR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DELETE_SUBSCR" (func $handler_DELETE_SUBSCR (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_DELETE_SUBSCR")))
+void handler_DELETE_SUBSCR(PyObject *container, PyObject *sub);
+
+void handler_DELETE_SUBSCR(PyObject *container, PyObject *sub) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    /* del container[sub] */
+    int err = PyObject_DelItem(container, sub);
+    Py_DECREF(container);
+    Py_DECREF(sub);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: CALL_INTRINSIC_1
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CALL_INTRINSIC_1" (func $handler_CALL_INTRINSIC_1 (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_CALL_INTRINSIC_1")))
+PyObject *handler_CALL_INTRINSIC_1(int oparg, PyObject *value);
+
+PyObject *handler_CALL_INTRINSIC_1(int oparg, PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    assert(oparg <= MAX_INTRINSIC_1);
+    res = _PyIntrinsics_UnaryFunctions[oparg].func(tstate, value);
+    Py_DECREF(value);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: CALL_INTRINSIC_2
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CALL_INTRINSIC_2" (func $handler_CALL_INTRINSIC_2 (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_CALL_INTRINSIC_2")))
+PyObject *handler_CALL_INTRINSIC_2(int oparg, PyObject *value2, PyObject *value1);
+
+PyObject *handler_CALL_INTRINSIC_2(int oparg, PyObject *value2, PyObject *value1) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    assert(oparg <= MAX_INTRINSIC_2);
+    res = _PyIntrinsics_BinaryFunctions[oparg].func(tstate, value2, value1);
+    Py_DECREF(value2);
+    Py_DECREF(value1);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: RAISE_VARARGS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_RAISE_VARARGS" (func $handler_RAISE_VARARGS (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_RAISE_VARARGS")))
+void handler_RAISE_VARARGS(int oparg, PyObject **args);
+
+void handler_RAISE_VARARGS(int oparg, PyObject **args) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *cause = NULL, *exc = NULL;
+    switch (oparg) {
+        case 2:
+        cause = args[1];
+        /* fall through */
+        case 1:
+        exc = args[0];
+        /* fall through */
+        case 0:
+        if (do_raise(tstate, exc, cause)) {
+            assert(oparg == 0);
+            monitor_reraise(tstate, frame, this_instr);
+            goto exception_unwind;
+        }
+        break;
+        default:
+        _PyErr_SetString(tstate, PyExc_SystemError,
+                                 "bad RAISE_VARARGS oparg");
+        break;
+    }
+    assert(true); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INTERPRETER_EXIT
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INTERPRETER_EXIT" (func $handler_INTERPRETER_EXIT (param i32) (result)))
+
+__attribute__ ((export_name("handler_INTERPRETER_EXIT")))
+void handler_INTERPRETER_EXIT(PyObject *retval);
+
+void handler_INTERPRETER_EXIT(PyObject *retval) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(frame == &entry_frame);
+    assert(_PyFrame_IsIncomplete(frame));
+    /* Restore previous frame and return. */
+    tstate->current_frame = frame->previous;
+    assert(!_PyErr_Occurred(tstate));
+    tstate->c_recursion_remaining += PY_EVAL_C_STACK_UNITS;
+    return retval;
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_RETURN_VALUE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_RETURN_VALUE" (func $handler_INSTRUMENTED_RETURN_VALUE (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_RETURN_VALUE")))
+void handler_INSTRUMENTED_RETURN_VALUE(PyObject *retval);
+
+void handler_INSTRUMENTED_RETURN_VALUE(PyObject *retval) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    int err = _Py_call_instrumentation_arg(
+        tstate, PY_MONITORING_EVENT_PY_RETURN,
+        frame, this_instr, retval);
+    if (err) ERROR_NO_POP();
+    STACK_SHRINK(1);
+    assert(EMPTY());
+    _PyFrame_SetStackPointer(frame, stack_pointer);
+    _Py_LeaveRecursiveCallPy(tstate);
+    assert(frame != &entry_frame);
+    // GH-99729: We need to unlink the frame *before* clearing it:
+    _PyInterpreterFrame *dying = frame;
+    frame = tstate->current_frame = dying->previous;
+    _PyEval_FrameClearAndPop(tstate, dying);
+    _PyFrame_StackPush(frame, retval);
+    LOAD_IP(frame->return_offset);
+    goto resume_frame;
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_RETURN_CONST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: True
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_RETURN_CONST" (func $handler_INSTRUMENTED_RETURN_CONST (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_RETURN_CONST")))
+void handler_INSTRUMENTED_RETURN_CONST(int oparg);
+
+void handler_INSTRUMENTED_RETURN_CONST(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *retval = GETITEM(FRAME_CO_CONSTS, oparg);
+    int err = _Py_call_instrumentation_arg(
+        tstate, PY_MONITORING_EVENT_PY_RETURN,
+        frame, this_instr, retval);
+    if (err) ERROR_NO_POP();
+    Py_INCREF(retval);
+    assert(EMPTY());
+    _PyFrame_SetStackPointer(frame, stack_pointer);
+    _Py_LeaveRecursiveCallPy(tstate);
+    assert(frame != &entry_frame);
+    // GH-99729: We need to unlink the frame *before* clearing it:
+    _PyInterpreterFrame *dying = frame;
+    frame = tstate->current_frame = dying->previous;
+    _PyEval_FrameClearAndPop(tstate, dying);
+    _PyFrame_StackPush(frame, retval);
+    LOAD_IP(frame->return_offset);
+    goto resume_frame;
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: GET_AITER
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_GET_AITER" (func $handler_GET_AITER (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_GET_AITER")))
+PyObject *handler_GET_AITER(PyObject *obj);
+
+PyObject *handler_GET_AITER(PyObject *obj) {
+    // (matthew) begin emitting space for return
+    PyObject *iter;
+    // (matthew) end emitting space for return
+
+    unaryfunc getter = NULL;
+    PyTypeObject *type = Py_TYPE(obj);
+    if (type->tp_as_async != NULL) {
+        getter = type->tp_as_async->am_aiter;
+    }
+    if (getter == NULL) {
+        _PyErr_Format(tstate, PyExc_TypeError,
+                              "'async for' requires an object with "
+                              "__aiter__ method, got %.100s",
+                              type->tp_name);
+        Py_DECREF(obj);
+        assert(true); // (matthew) replace error with assertion
+    }
+    iter = (*getter)(obj);
+    Py_DECREF(obj);
+    assert(iter == NULL); // (matthew) replace error with assertion
+    if (Py_TYPE(iter)->tp_as_async == NULL ||
+                Py_TYPE(iter)->tp_as_async->am_anext == NULL) {
+        _PyErr_Format(tstate, PyExc_TypeError,
+                              "'async for' received an object from __aiter__ "
+                              "that does not implement __anext__: %.100s",
+                              Py_TYPE(iter)->tp_name);
+        Py_DECREF(iter);
+        assert(true); // (matthew) replace error with assertion
+    }
+
+    // (matthew) begin return
+    return iter;
+}
+
+/* ------------------------
+ * OPCODE: GET_ANEXT
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_GET_ANEXT" (func $handler_GET_ANEXT (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_GET_ANEXT")))
+struct two_values handler_GET_ANEXT(PyObject *aiter);
+
+struct two_values handler_GET_ANEXT(PyObject *aiter) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *awaitable;
+    // (matthew) end emitting space for return
+
+    unaryfunc getter = NULL;
+    PyObject *next_iter = NULL;
+    PyTypeObject *type = Py_TYPE(aiter);
+    if (PyAsyncGen_CheckExact(aiter)) {
+        awaitable = type->tp_as_async->am_anext(aiter);
+        if (awaitable == NULL) {
+            ERROR_NO_POP();
+        }
+    } else {
+        if (type->tp_as_async != NULL){
+            getter = type->tp_as_async->am_anext;
+        }
+        if (getter != NULL) {
+            next_iter = (*getter)(aiter);
+            if (next_iter == NULL) {
+                ERROR_NO_POP();
+            }
+        }
+        else {
+            _PyErr_Format(tstate, PyExc_TypeError,
+                                  "'async for' requires an iterator with "
+                                  "__anext__ method, got %.100s",
+                                  type->tp_name);
+            ERROR_NO_POP();
+        }
+        awaitable = _PyCoro_GetAwaitableIter(next_iter);
+        if (awaitable == NULL) {
+            _PyErr_FormatFromCause(
+                PyExc_TypeError,
+                "'async for' received an invalid object "
+                "from __anext__: %.100s",
+                Py_TYPE(next_iter)->tp_name);
+            Py_DECREF(next_iter);
+            ERROR_NO_POP();
+        } else {
+            Py_DECREF(next_iter);
+        }
+    }
+
+    // (matthew) begin return
+    two_value_return.first = aiter;
+    two_value_return.second = awaitable;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: GET_AWAITABLE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_GET_AWAITABLE" (func $handler_GET_AWAITABLE (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_GET_AWAITABLE")))
+PyObject *handler_GET_AWAITABLE(int oparg, PyObject *iterable);
+
+PyObject *handler_GET_AWAITABLE(int oparg, PyObject *iterable) {
+    // (matthew) begin emitting space for return
+    PyObject *iter;
+    // (matthew) end emitting space for return
+
+    iter = _PyCoro_GetAwaitableIter(iterable);
+    if (iter == NULL) {
+        _PyEval_FormatAwaitableError(tstate, Py_TYPE(iterable), oparg);
+    }
+    Py_DECREF(iterable);
+    if (iter != NULL && PyCoro_CheckExact(iter)) {
+        PyObject *yf = _PyGen_yf((PyGenObject*)iter);
+        if (yf != NULL) {
+            /* `iter` is a coroutine object that is being
+               awaited, `yf` is a pointer to the current awaitable
+               being awaited on. */
+            Py_DECREF(yf);
+            Py_CLEAR(iter);
+            _PyErr_SetString(tstate, PyExc_RuntimeError,
+                                     "coroutine is being awaited already");
+            /* The code below jumps to `error` if `iter` is NULL. */
+        }
+    }
+    assert(iter == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return iter;
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_YIELD_VALUE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_YIELD_VALUE" (func $handler_INSTRUMENTED_YIELD_VALUE (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_YIELD_VALUE")))
+PyObject *handler_INSTRUMENTED_YIELD_VALUE(int oparg, PyObject *retval);
+
+PyObject *handler_INSTRUMENTED_YIELD_VALUE(int oparg, PyObject *retval) {
+    // (matthew) begin emitting space for return
+    PyObject *unused;
+    // (matthew) end emitting space for return
+
+    assert(frame != &entry_frame);
+    frame->instr_ptr = next_instr;
+    PyGenObject *gen = _PyFrame_GetGenerator(frame);
+    assert(FRAME_SUSPENDED_YIELD_FROM == FRAME_SUSPENDED + 1);
+    assert(oparg == 0 || oparg == 1);
+    gen->gi_frame_state = FRAME_SUSPENDED + oparg;
+    _PyFrame_SetStackPointer(frame, stack_pointer - 1);
+    int err = _Py_call_instrumentation_arg(
+        tstate, PY_MONITORING_EVENT_PY_YIELD,
+        frame, this_instr, retval);
+    if (err) ERROR_NO_POP();
+    tstate->exc_info = gen->gi_exc_state.previous_item;
+    gen->gi_exc_state.previous_item = NULL;
+    _Py_LeaveRecursiveCallPy(tstate);
+    _PyInterpreterFrame *gen_frame = frame;
+    frame = tstate->current_frame = frame->previous;
+    gen_frame->previous = NULL;
+    _PyFrame_StackPush(frame, retval);
+    /* We don't know which of these is relevant here, so keep them equal */
+    assert(INLINE_CACHE_ENTRIES_SEND == INLINE_CACHE_ENTRIES_FOR_ITER);
+    LOAD_IP(1 + INLINE_CACHE_ENTRIES_SEND);
+    goto resume_frame;
+
+    // (matthew) begin return
+    return unused;
+}
+
+/* ------------------------
+ * OPCODE: YIELD_VALUE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: True
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_YIELD_VALUE" (func $handler_YIELD_VALUE (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_YIELD_VALUE")))
+PyObject *handler_YIELD_VALUE(int oparg, PyObject *retval);
+
+PyObject *handler_YIELD_VALUE(int oparg, PyObject *retval) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    // NOTE: It's important that YIELD_VALUE never raises an exception!
+    // The compiler treats any exception raised here as a failed close()
+    // or throw() call.
+    #if TIER_ONE
+    assert(frame != &entry_frame);
+    #endif
+    frame->instr_ptr++;
+    PyGenObject *gen = _PyFrame_GetGenerator(frame);
+    assert(FRAME_SUSPENDED_YIELD_FROM == FRAME_SUSPENDED + 1);
+    assert(oparg == 0 || oparg == 1);
+    gen->gi_frame_state = FRAME_SUSPENDED + oparg;
+    SYNC_SP();
+    _PyFrame_SetStackPointer(frame, stack_pointer);
+    tstate->exc_info = gen->gi_exc_state.previous_item;
+    gen->gi_exc_state.previous_item = NULL;
+    _Py_LeaveRecursiveCallPy(tstate);
+    _PyInterpreterFrame *gen_frame = frame;
+    frame = tstate->current_frame = frame->previous;
+    gen_frame->previous = NULL;
+    /* We don't know which of these is relevant here, so keep them equal */
+    assert(INLINE_CACHE_ENTRIES_SEND == INLINE_CACHE_ENTRIES_FOR_ITER);
+    #if TIER_ONE
+    assert(frame->instr_ptr->op.code == INSTRUMENTED_LINE ||
+                   frame->instr_ptr->op.code == INSTRUMENTED_INSTRUCTION ||
+                   _PyOpcode_Deopt[frame->instr_ptr->op.code] == SEND ||
+                   _PyOpcode_Deopt[frame->instr_ptr->op.code] == FOR_ITER ||
+                   _PyOpcode_Deopt[frame->instr_ptr->op.code] == INTERPRETER_EXIT ||
+                   _PyOpcode_Deopt[frame->instr_ptr->op.code] == ENTER_EXECUTOR);
+    #endif
+    LOAD_IP(1 + INLINE_CACHE_ENTRIES_SEND);
+    LOAD_SP();
+    value = retval;
+    LLTRACE_RESUME_FRAME();
+
+    // (matthew) begin return
+    return value;
+}
+
+/* ------------------------
+ * OPCODE: POP_EXCEPT
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_POP_EXCEPT" (func $handler_POP_EXCEPT (param i32) (result)))
+
+__attribute__ ((export_name("handler_POP_EXCEPT")))
+void handler_POP_EXCEPT(PyObject *exc_value);
+
+void handler_POP_EXCEPT(PyObject *exc_value) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    _PyErr_StackItem *exc_info = tstate->exc_info;
+    Py_XSETREF(exc_info->exc_value, exc_value == Py_None ? NULL : exc_value);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: RERAISE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_RERAISE" (func $handler_RERAISE (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_RERAISE")))
+PyObject **handler_RERAISE(int oparg, PyObject **values, PyObject *exc);
+
+PyObject **handler_RERAISE(int oparg, PyObject **values, PyObject *exc) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(oparg >= 0 && oparg <= 2);
+    if (oparg) {
+        PyObject *lasti = values[0];
+        if (PyLong_Check(lasti)) {
+            frame->instr_ptr = _PyCode_CODE(_PyFrame_GetCode(frame)) + PyLong_AsLong(lasti);
+            assert(!_PyErr_Occurred(tstate));
+        }
+        else {
+            assert(PyLong_Check(lasti));
+            _PyErr_SetString(tstate, PyExc_SystemError, "lasti is not an int");
+            ERROR_NO_POP();
+        }
+    }
+    assert(exc && PyExceptionInstance_Check(exc));
+    Py_INCREF(exc);
+    _PyErr_SetRaisedException(tstate, exc);
+    monitor_reraise(tstate, frame, this_instr);
+    goto exception_unwind;
+
+    // (matthew) begin return
+    return values;
+}
+
+/* ------------------------
+ * OPCODE: END_ASYNC_FOR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_END_ASYNC_FOR" (func $handler_END_ASYNC_FOR (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_END_ASYNC_FOR")))
+void handler_END_ASYNC_FOR(PyObject *awaitable, PyObject *exc);
+
+void handler_END_ASYNC_FOR(PyObject *awaitable, PyObject *exc) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(exc && PyExceptionInstance_Check(exc));
+    if (PyErr_GivenExceptionMatches(exc, PyExc_StopAsyncIteration)) {
+        Py_DECREF(awaitable);
+        Py_DECREF(exc);
+    }
+    else {
+        Py_INCREF(exc);
+        _PyErr_SetRaisedException(tstate, exc);
+        monitor_reraise(tstate, frame, this_instr);
+        goto exception_unwind;
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: CLEANUP_THROW
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CLEANUP_THROW" (func $handler_CLEANUP_THROW (param i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_CLEANUP_THROW")))
+struct two_values handler_CLEANUP_THROW(PyObject *sub_iter, PyObject *last_sent_val, PyObject *exc_value);
+
+struct two_values handler_CLEANUP_THROW(PyObject *sub_iter, PyObject *last_sent_val, PyObject *exc_value) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *none;
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    assert(throwflag);
+    assert(exc_value && PyExceptionInstance_Check(exc_value));
+    if (PyErr_GivenExceptionMatches(exc_value, PyExc_StopIteration)) {
+        value = Py_NewRef(((PyStopIterationObject *)exc_value)->value);
+        Py_DECREF(sub_iter);
+        Py_DECREF(last_sent_val);
+        Py_DECREF(exc_value);
+        none = Py_None;
+    }
+    else {
+        _PyErr_SetRaisedException(tstate, Py_NewRef(exc_value));
+        monitor_reraise(tstate, frame, this_instr);
+        goto exception_unwind;
+    }
+
+    // (matthew) begin return
+    two_value_return.first = none;
+    two_value_return.second = value;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_ASSERTION_ERROR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_ASSERTION_ERROR" (func $handler_LOAD_ASSERTION_ERROR (param) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_ASSERTION_ERROR")))
+PyObject *handler_LOAD_ASSERTION_ERROR(void);
+
+PyObject *handler_LOAD_ASSERTION_ERROR(void) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    value = Py_NewRef(PyExc_AssertionError);
+
+    // (matthew) begin return
+    return value;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_BUILD_CLASS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_BUILD_CLASS" (func $handler_LOAD_BUILD_CLASS (param) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_BUILD_CLASS")))
+PyObject *handler_LOAD_BUILD_CLASS(void);
+
+PyObject *handler_LOAD_BUILD_CLASS(void) {
+    // (matthew) begin emitting space for return
+    PyObject *bc;
+    // (matthew) end emitting space for return
+
+    assert(PyMapping_GetOptionalItem(BUILTINS(), &_Py_ID(__build_class__), &bc) < 0); // (matthew) replace error with assertion
+    if (bc == NULL) {
+        _PyErr_SetString(tstate, PyExc_NameError,
+                                 "__build_class__ not found");
+        assert(true); // (matthew) replace error with assertion
+    }
+
+    // (matthew) begin return
+    return bc;
+}
+
+/* ------------------------
+ * OPCODE: STORE_NAME
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_STORE_NAME" (func $handler_STORE_NAME (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_NAME")))
+void handler_STORE_NAME(int oparg, PyObject *v);
+
+void handler_STORE_NAME(int oparg, PyObject *v) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    PyObject *ns = LOCALS();
+    int err;
+    if (ns == NULL) {
+        _PyErr_Format(tstate, PyExc_SystemError,
+                              "no locals found when storing %R", name);
+        Py_DECREF(v);
+        assert(true); // (matthew) replace error with assertion
+    }
+    if (PyDict_CheckExact(ns))
+    err = PyDict_SetItem(ns, name, v);
+    else
+    err = PyObject_SetItem(ns, name, v);
+    Py_DECREF(v);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: DELETE_NAME
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DELETE_NAME" (func $handler_DELETE_NAME (param i32) (result)))
+
+__attribute__ ((export_name("handler_DELETE_NAME")))
+void handler_DELETE_NAME(int oparg);
+
+void handler_DELETE_NAME(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    PyObject *ns = LOCALS();
+    int err;
+    if (ns == NULL) {
+        _PyErr_Format(tstate, PyExc_SystemError,
+                              "no locals when deleting %R", name);
+        ERROR_NO_POP();
+    }
+    err = PyObject_DelItem(ns, name);
+    // Can't use ERROR_IF here.
+    if (err != 0) {
+        _PyEval_FormatExcCheckArg(tstate, PyExc_NameError,
+            NAME_ERROR_MSG,
+            name);
+        ERROR_NO_POP();
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: UNPACK_EX
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_UNPACK_EX" (func $handler_UNPACK_EX (param i32 i32) (result i32 i32 i32)))
+
+// >>#!@#@! SKIPPING because there are more than 2 outputs
+
+/* ------------------------
+ * OPCODE: DELETE_ATTR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DELETE_ATTR" (func $handler_DELETE_ATTR (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_DELETE_ATTR")))
+void handler_DELETE_ATTR(int oparg, PyObject *owner);
+
+void handler_DELETE_ATTR(int oparg, PyObject *owner) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    int err = PyObject_DelAttr(owner, name);
+    Py_DECREF(owner);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: STORE_GLOBAL
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_STORE_GLOBAL" (func $handler_STORE_GLOBAL (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_GLOBAL")))
+void handler_STORE_GLOBAL(int oparg, PyObject *v);
+
+void handler_STORE_GLOBAL(int oparg, PyObject *v) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    int err = PyDict_SetItem(GLOBALS(), name, v);
+    Py_DECREF(v);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: DELETE_GLOBAL
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DELETE_GLOBAL" (func $handler_DELETE_GLOBAL (param i32) (result)))
+
+__attribute__ ((export_name("handler_DELETE_GLOBAL")))
+void handler_DELETE_GLOBAL(int oparg);
+
+void handler_DELETE_GLOBAL(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    int err = PyDict_Pop(GLOBALS(), name, NULL);
+    // Can't use ERROR_IF here.
+    if (err < 0) {
+        ERROR_NO_POP();
+    }
+    if (err == 0) {
+        _PyEval_FormatExcCheckArg(tstate, PyExc_NameError,
+            NAME_ERROR_MSG, name);
+        ERROR_NO_POP();
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: LOAD_LOCALS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_LOCALS" (func $handler_LOAD_LOCALS (param) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_LOCALS")))
+PyObject *handler_LOAD_LOCALS(void);
+
+PyObject *handler_LOAD_LOCALS(void) {
+    // (matthew) begin emitting space for return
+    PyObject *locals;
+    // (matthew) end emitting space for return
+
+    locals = LOCALS();
+    if (locals == NULL) {
+        _PyErr_SetString(tstate, PyExc_SystemError,
+                                 "no locals found");
+        assert(true); // (matthew) replace error with assertion
+    }
+    Py_INCREF(locals);
+
+    // (matthew) begin return
+    return locals;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_FROM_DICT_OR_GLOBALS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_FROM_DICT_OR_GLOBALS" (func $handler_LOAD_FROM_DICT_OR_GLOBALS (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_FROM_DICT_OR_GLOBALS")))
+PyObject *handler_LOAD_FROM_DICT_OR_GLOBALS(int oparg, PyObject *mod_or_class_dict);
+
+PyObject *handler_LOAD_FROM_DICT_OR_GLOBALS(int oparg, PyObject *mod_or_class_dict) {
+    // (matthew) begin emitting space for return
+    PyObject *v;
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    if (PyMapping_GetOptionalItem(mod_or_class_dict, name, &v) < 0) {
+        ERROR_NO_POP();
+    }
+    if (v == NULL) {
+        if (PyDict_CheckExact(GLOBALS())
+                    && PyDict_CheckExact(BUILTINS()))
+        {
+            v = _PyDict_LoadGlobal((PyDictObject *)GLOBALS(),
+                (PyDictObject *)BUILTINS(),
+                name);
+            if (v == NULL) {
+                if (!_PyErr_Occurred(tstate)) {
+                    /* _PyDict_LoadGlobal() returns NULL without raising
+                     * an exception if the key doesn't exist */
+                    _PyEval_FormatExcCheckArg(tstate, PyExc_NameError,
+                        NAME_ERROR_MSG, name);
+                }
+                ERROR_NO_POP();
+            }
+        }
+        else {
+            /* Slow-path if globals or builtins is not a dict */
+            /* namespace 1: globals */
+            assert(PyMapping_GetOptionalItem(GLOBALS(), name, &v) < 0); // (matthew) replace error with assertion
+            if (v == NULL) {
+                /* namespace 2: builtins */
+                assert(PyMapping_GetOptionalItem(BUILTINS(), name, &v) < 0); // (matthew) replace error with assertion
+                if (v == NULL) {
+                    _PyEval_FormatExcCheckArg(
+                        tstate, PyExc_NameError,
+                        NAME_ERROR_MSG, name);
+                    assert(true); // (matthew) replace error with assertion
+                }
+            }
+        }
+    }
+    Py_DECREF(mod_or_class_dict);
+
+
+    // (matthew) begin return
+    return v;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_NAME
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_NAME" (func $handler_LOAD_NAME (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_NAME")))
+PyObject *handler_LOAD_NAME(int oparg);
+
+PyObject *handler_LOAD_NAME(int oparg) {
+    // (matthew) begin emitting space for return
+    PyObject *v;
+    // (matthew) end emitting space for return
+
+    PyObject *mod_or_class_dict = LOCALS();
+    if (mod_or_class_dict == NULL) {
+        _PyErr_SetString(tstate, PyExc_SystemError,
+                                 "no locals found");
+        assert(true); // (matthew) replace error with assertion
+    }
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    if (PyMapping_GetOptionalItem(mod_or_class_dict, name, &v) < 0) {
+        ERROR_NO_POP();
+    }
+    if (v == NULL) {
+        if (PyDict_GetItemRef(GLOBALS(), name, &v) < 0) {
+            ERROR_NO_POP();
+        }
+        if (v == NULL) {
+            if (PyMapping_GetOptionalItem(BUILTINS(), name, &v) < 0) {
+                ERROR_NO_POP();
+            }
+            if (v == NULL) {
+                _PyEval_FormatExcCheckArg(
+                    tstate, PyExc_NameError,
+                    NAME_ERROR_MSG, name);
+                ERROR_NO_POP();
+            }
+        }
+    }
+
+    // (matthew) begin return
+    return v;
+}
+
+/* ------------------------
+ * OPCODE: DELETE_FAST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: True
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DELETE_FAST" (func $handler_DELETE_FAST (param i32) (result)))
+
+__attribute__ ((export_name("handler_DELETE_FAST")))
+void handler_DELETE_FAST(int oparg);
+
+void handler_DELETE_FAST(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *v = GETLOCAL(oparg);
+    if (v == NULL) {
+        _PyEval_FormatExcCheckArg(tstate, PyExc_UnboundLocalError,
+            UNBOUNDLOCAL_ERROR_MSG,
+            PyTuple_GetItem(_PyFrame_GetCode(frame)->co_localsplusnames, oparg)
+        );
+        assert(1); // (matthew) replace error with assertion
+    }
+    SETLOCAL(oparg, NULL);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: MAKE_CELL
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: True
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_MAKE_CELL" (func $handler_MAKE_CELL (param i32) (result)))
+
+__attribute__ ((export_name("handler_MAKE_CELL")))
+void handler_MAKE_CELL(int oparg);
+
+void handler_MAKE_CELL(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    // "initial" is probably NULL but not if it's an arg (or set
+    // via the f_locals proxy before MAKE_CELL has run).
+    PyObject *initial = GETLOCAL(oparg);
+    PyObject *cell = PyCell_New(initial);
+    if (cell == NULL) {
+        ERROR_NO_POP();
+    }
+    SETLOCAL(oparg, cell);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: DELETE_DEREF
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: True
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DELETE_DEREF" (func $handler_DELETE_DEREF (param i32) (result)))
+
+__attribute__ ((export_name("handler_DELETE_DEREF")))
+void handler_DELETE_DEREF(int oparg);
+
+void handler_DELETE_DEREF(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *cell = GETLOCAL(oparg);
+    // Can't use ERROR_IF here.
+    // Fortunately we don't need its superpower.
+    PyObject *oldobj = PyCell_SwapTakeRef((PyCellObject *)cell, NULL);
+    if (oldobj == NULL) {
+        _PyEval_FormatExcUnbound(tstate, _PyFrame_GetCode(frame), oparg);
+        ERROR_NO_POP();
+    }
+    Py_DECREF(oldobj);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: LOAD_FROM_DICT_OR_DEREF
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: True
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_FROM_DICT_OR_DEREF" (func $handler_LOAD_FROM_DICT_OR_DEREF (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_FROM_DICT_OR_DEREF")))
+PyObject *handler_LOAD_FROM_DICT_OR_DEREF(int oparg, PyObject *class_dict);
+
+PyObject *handler_LOAD_FROM_DICT_OR_DEREF(int oparg, PyObject *class_dict) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    PyObject *name;
+    assert(class_dict);
+    assert(oparg >= 0 && oparg < _PyFrame_GetCode(frame)->co_nlocalsplus);
+    name = PyTuple_GET_ITEM(_PyFrame_GetCode(frame)->co_localsplusnames, oparg);
+    if (PyMapping_GetOptionalItem(class_dict, name, &value) < 0) {
+        ERROR_NO_POP();
+    }
+    if (!value) {
+        PyCellObject *cell = (PyCellObject *)GETLOCAL(oparg);
+        value = PyCell_GetRef(cell);
+        if (value == NULL) {
+            _PyEval_FormatExcUnbound(tstate, _PyFrame_GetCode(frame), oparg);
+            ERROR_NO_POP();
+        }
+    }
+    Py_DECREF(class_dict);
+
+    // (matthew) begin return
+    return value;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_DEREF
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: True
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_DEREF" (func $handler_LOAD_DEREF (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_DEREF")))
+PyObject *handler_LOAD_DEREF(int oparg);
+
+PyObject *handler_LOAD_DEREF(int oparg) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    PyCellObject *cell = (PyCellObject *)GETLOCAL(oparg);
+    value = PyCell_GetRef(cell);
+    if (value == NULL) {
+        _PyEval_FormatExcUnbound(tstate, _PyFrame_GetCode(frame), oparg);
+        assert(true); // (matthew) replace error with assertion
+    }
+
+    // (matthew) begin return
+    return value;
+}
+
+/* ------------------------
+ * OPCODE: STORE_DEREF
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: True
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_STORE_DEREF" (func $handler_STORE_DEREF (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_DEREF")))
+void handler_STORE_DEREF(int oparg, PyObject *v);
+
+void handler_STORE_DEREF(int oparg, PyObject *v) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyCellObject *cell = (PyCellObject *)GETLOCAL(oparg);
+    PyCell_SetTakeRef(cell, v);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: COPY_FREE_VARS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_COPY_FREE_VARS" (func $handler_COPY_FREE_VARS (param i32) (result)))
+
+__attribute__ ((export_name("handler_COPY_FREE_VARS")))
+void handler_COPY_FREE_VARS(int oparg);
+
+void handler_COPY_FREE_VARS(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    /* Copy closure variables to free variables */
+    PyCodeObject *co = _PyFrame_GetCode(frame);
+    assert(PyFunction_Check(frame->f_funcobj));
+    PyObject *closure = ((PyFunctionObject *)frame->f_funcobj)->func_closure;
+    assert(oparg == co->co_nfreevars);
+    int offset = co->co_nlocalsplus - oparg;
+    for (int i = 0; i < oparg; ++i) {
+        PyObject *o = PyTuple_GET_ITEM(closure, i);
+        frame->localsplus[offset + i] = Py_NewRef(o);
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: BUILD_STRING
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BUILD_STRING" (func $handler_BUILD_STRING (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BUILD_STRING")))
+PyObject *handler_BUILD_STRING(int oparg, PyObject **pieces);
+
+PyObject *handler_BUILD_STRING(int oparg, PyObject **pieces) {
+    // (matthew) begin emitting space for return
+    PyObject *str;
+    // (matthew) end emitting space for return
+
+    str = _PyUnicode_JoinArray(&_Py_STR(empty), pieces, oparg);
+    for (int _i = oparg; --_i >= 0;) {
+        Py_DECREF(pieces[_i]);
+    }
+    assert(str == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return str;
+}
+
+/* ------------------------
+ * OPCODE: BUILD_TUPLE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BUILD_TUPLE" (func $handler_BUILD_TUPLE (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BUILD_TUPLE")))
+PyObject *handler_BUILD_TUPLE(int oparg, PyObject **values);
+
+PyObject *handler_BUILD_TUPLE(int oparg, PyObject **values) {
+    // (matthew) begin emitting space for return
+    PyObject *tup;
+    // (matthew) end emitting space for return
+
+    tup = _PyTuple_FromArraySteal(values, oparg);
+    assert(tup == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return tup;
+}
+
+/* ------------------------
+ * OPCODE: BUILD_LIST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BUILD_LIST" (func $handler_BUILD_LIST (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BUILD_LIST")))
+PyObject *handler_BUILD_LIST(int oparg, PyObject **values);
+
+PyObject *handler_BUILD_LIST(int oparg, PyObject **values) {
+    // (matthew) begin emitting space for return
+    PyObject *list;
+    // (matthew) end emitting space for return
+
+    list = _PyList_FromArraySteal(values, oparg);
+    assert(list == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return list;
+}
+
+/* ------------------------
+ * OPCODE: LIST_EXTEND
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LIST_EXTEND" (func $handler_LIST_EXTEND (param i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_LIST_EXTEND")))
+struct two_values handler_LIST_EXTEND(int oparg, PyObject *list, PyObject **unused, PyObject *iterable);
+
+struct two_values handler_LIST_EXTEND(int oparg, PyObject *list, PyObject **unused, PyObject *iterable) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    // (matthew) end emitting space for return
+
+    PyObject *none_val = _PyList_Extend((PyListObject *)list, iterable);
+    if (none_val == NULL) {
+        if (_PyErr_ExceptionMatches(tstate, PyExc_TypeError) &&
+                    (Py_TYPE(iterable)->tp_iter == NULL && !PySequence_Check(iterable)))
+        {
+            _PyErr_Clear(tstate);
+            _PyErr_Format(tstate, PyExc_TypeError,
+                                  "Value after * must be an iterable, not %.200s",
+                                  Py_TYPE(iterable)->tp_name);
+        }
+        Py_DECREF(iterable);
+        assert(true); // (matthew) replace error with assertion
+    }
+    assert(Py_IsNone(none_val));
+    Py_DECREF(iterable);
+
+
+    // (matthew) begin return
+    two_value_return.first = list;
+    two_value_return.second = unused;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: SET_UPDATE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_SET_UPDATE" (func $handler_SET_UPDATE (param i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_SET_UPDATE")))
+struct two_values handler_SET_UPDATE(int oparg, PyObject *set, PyObject **unused, PyObject *iterable);
+
+struct two_values handler_SET_UPDATE(int oparg, PyObject *set, PyObject **unused, PyObject *iterable) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    // (matthew) end emitting space for return
+
+    int err = _PySet_Update(set, iterable);
+    Py_DECREF(iterable);
+    assert(err < 0); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    two_value_return.first = set;
+    two_value_return.second = unused;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: BUILD_SET
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BUILD_SET" (func $handler_BUILD_SET (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BUILD_SET")))
+PyObject *handler_BUILD_SET(int oparg, PyObject **values);
+
+PyObject *handler_BUILD_SET(int oparg, PyObject **values) {
+    // (matthew) begin emitting space for return
+    PyObject *set;
+    // (matthew) end emitting space for return
+
+    set = PySet_New(NULL);
+    if (set == NULL)
+    ERROR_NO_POP();
+    int err = 0;
+    for (int i = 0; i < oparg; i++) {
+        PyObject *item = values[i];
+        if (err == 0)
+        err = PySet_Add(set, item);
+        Py_DECREF(item);
+    }
+    if (err != 0) {
+        Py_DECREF(set);
+        assert(true); // (matthew) replace error with assertion
+    }
+
+    // (matthew) begin return
+    return set;
+}
+
+/* ------------------------
+ * OPCODE: BUILD_MAP
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BUILD_MAP" (func $handler_BUILD_MAP (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BUILD_MAP")))
+PyObject *handler_BUILD_MAP(int oparg, PyObject **values);
+
+PyObject *handler_BUILD_MAP(int oparg, PyObject **values) {
+    // (matthew) begin emitting space for return
+    PyObject *map;
+    // (matthew) end emitting space for return
+
+    map = _PyDict_FromItems(
+                                    values, 2,
+                                    values+1, 2,
+                                    oparg);
+    for (int _i = oparg*2; --_i >= 0;) {
+        Py_DECREF(values[_i]);
+    }
+    assert(map == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return map;
+}
+
+/* ------------------------
+ * OPCODE: SETUP_ANNOTATIONS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_SETUP_ANNOTATIONS" (func $handler_SETUP_ANNOTATIONS (param) (result)))
+
+__attribute__ ((export_name("handler_SETUP_ANNOTATIONS")))
+void handler_SETUP_ANNOTATIONS(void);
+
+void handler_SETUP_ANNOTATIONS(void) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    int err;
+    PyObject *ann_dict;
+    if (LOCALS() == NULL) {
+        _PyErr_Format(tstate, PyExc_SystemError,
+                              "no locals found when setting up annotations");
+        assert(true); // (matthew) replace error with assertion
+    }
+    /* check if __annotations__ in locals()... */
+    assert(PyMapping_GetOptionalItem(LOCALS(), &_Py_ID(__annotations__), &ann_dict) < 0); // (matthew) replace error with assertion
+    if (ann_dict == NULL) {
+        ann_dict = PyDict_New();
+        assert(ann_dict == NULL); // (matthew) replace error with assertion
+        err = PyObject_SetItem(LOCALS(), &_Py_ID(__annotations__),
+                                       ann_dict);
+        Py_DECREF(ann_dict);
+        assert(err); // (matthew) replace error with assertion
+    }
+    else {
+        Py_DECREF(ann_dict);
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: BUILD_CONST_KEY_MAP
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BUILD_CONST_KEY_MAP" (func $handler_BUILD_CONST_KEY_MAP (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BUILD_CONST_KEY_MAP")))
+PyObject *handler_BUILD_CONST_KEY_MAP(int oparg, PyObject **values, PyObject *keys);
+
+PyObject *handler_BUILD_CONST_KEY_MAP(int oparg, PyObject **values, PyObject *keys) {
+    // (matthew) begin emitting space for return
+    PyObject *map;
+    // (matthew) end emitting space for return
+
+    assert(PyTuple_CheckExact(keys));
+    assert(PyTuple_GET_SIZE(keys) == (Py_ssize_t)oparg);
+    map = _PyDict_FromItems(
+                                    &PyTuple_GET_ITEM(keys, 0), 1,
+                                    values, 1, oparg);
+    for (int _i = oparg; --_i >= 0;) {
+        Py_DECREF(values[_i]);
+    }
+    Py_DECREF(keys);
+    assert(map == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return map;
+}
+
+/* ------------------------
+ * OPCODE: DICT_UPDATE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DICT_UPDATE" (func $handler_DICT_UPDATE (param i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_DICT_UPDATE")))
+struct two_values handler_DICT_UPDATE(int oparg, PyObject *dict, PyObject **unused, PyObject *update);
+
+struct two_values handler_DICT_UPDATE(int oparg, PyObject *dict, PyObject **unused, PyObject *update) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    // (matthew) end emitting space for return
+
+    if (PyDict_Update(dict, update) < 0) {
+        if (_PyErr_ExceptionMatches(tstate, PyExc_AttributeError)) {
+            _PyErr_Format(tstate, PyExc_TypeError,
+                                  "'%.200s' object is not a mapping",
+                                  Py_TYPE(update)->tp_name);
+        }
+        Py_DECREF(update);
+        assert(true); // (matthew) replace error with assertion
+    }
+    Py_DECREF(update);
+
+
+    // (matthew) begin return
+    two_value_return.first = dict;
+    two_value_return.second = unused;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: DICT_MERGE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_DICT_MERGE" (func $handler_DICT_MERGE (param i32 i32 i32 i32 i32 i32 i32) (result i32 i32 i32 i32 i32)))
+
+// >>#!@#@! SKIPPING because there are more than 2 outputs
+
+/* ------------------------
+ * OPCODE: MAP_ADD
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_MAP_ADD" (func $handler_MAP_ADD (param i32 i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_MAP_ADD")))
+struct two_values handler_MAP_ADD(int oparg, PyObject *dict, PyObject **unused, PyObject *key, PyObject *value);
+
+struct two_values handler_MAP_ADD(int oparg, PyObject *dict, PyObject **unused, PyObject *key, PyObject *value) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    // (matthew) end emitting space for return
+
+    assert(PyDict_CheckExact(dict));
+    /* dict[key] = value */
+    // Do not DECREF INPUTS because the function steals the references
+    assert(_PyDict_SetItem_Take2((PyDictObject *)dict, key, value) != 0); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    two_value_return.first = dict;
+    two_value_return.second = unused;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_LOAD_SUPER_ATTR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_INSTRUMENTED_LOAD_SUPER_ATTR" (func $handler_INSTRUMENTED_LOAD_SUPER_ATTR (param i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_LOAD_SUPER_ATTR")))
+struct two_values handler_INSTRUMENTED_LOAD_SUPER_ATTR(int oparg, PyObject *unused, PyObject *unused, PyObject *unused);
+
+struct two_values handler_INSTRUMENTED_LOAD_SUPER_ATTR(int oparg, PyObject *unused, PyObject *unused, PyObject *unused) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    // (matthew) end emitting space for return
+
+    // cancel out the decrement that will happen in LOAD_SUPER_ATTR; we
+    // don't want to specialize instrumented instructions
+    PAUSE_ADAPTIVE_COUNTER(this_instr[1].counter);
+    GO_TO_INSTRUCTION(LOAD_SUPER_ATTR);
+
+    // (matthew) begin return
+    two_value_return.first = unused;
+    two_value_return.second = unused;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: IS_OP
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_IS_OP" (func $handler_IS_OP (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_IS_OP")))
+PyObject *handler_IS_OP(int oparg, PyObject *left, PyObject *right);
+
+PyObject *handler_IS_OP(int oparg, PyObject *left, PyObject *right) {
+    // (matthew) begin emitting space for return
+    PyObject *b;
+    // (matthew) end emitting space for return
+
+    int res = Py_Is(left, right) ^ oparg;
+    Py_DECREF(left);
+    Py_DECREF(right);
+    b = res ? Py_True : Py_False;
+
+    // (matthew) begin return
+    return b;
+}
+
+/* ------------------------
+ * OPCODE: CHECK_EG_MATCH
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CHECK_EG_MATCH" (func $handler_CHECK_EG_MATCH (param i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_CHECK_EG_MATCH")))
+struct two_values handler_CHECK_EG_MATCH(PyObject *exc_value, PyObject *match_type);
+
+struct two_values handler_CHECK_EG_MATCH(PyObject *exc_value, PyObject *match_type) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *rest;
+    PyObject *match;
+    // (matthew) end emitting space for return
+
+    if (_PyEval_CheckExceptStarTypeValid(tstate, match_type) < 0) {
+        Py_DECREF(exc_value);
+        Py_DECREF(match_type);
+        assert(true); // (matthew) replace error with assertion
+    }
+    match = NULL;
+    rest = NULL;
+    int res = _PyEval_ExceptionGroupMatch(exc_value, match_type,
+        &match, &rest);
+    Py_DECREF(exc_value);
+    Py_DECREF(match_type);
+    assert(res < 0); // (matthew) replace error with assertion
+    assert((match == NULL) == (rest == NULL));
+    assert(match == NULL); // (matthew) replace error with assertion
+    if (!Py_IsNone(match)) {
+        PyErr_SetHandledException(match);
+    }
+
+    // (matthew) begin return
+    two_value_return.first = rest;
+    two_value_return.second = match;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: CHECK_EXC_MATCH
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CHECK_EXC_MATCH" (func $handler_CHECK_EXC_MATCH (param i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_CHECK_EXC_MATCH")))
+struct two_values handler_CHECK_EXC_MATCH(PyObject *left, PyObject *right);
+
+struct two_values handler_CHECK_EXC_MATCH(PyObject *left, PyObject *right) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *b;
+    // (matthew) end emitting space for return
+
+    assert(PyExceptionInstance_Check(left));
+    if (_PyEval_CheckExceptTypeValid(tstate, right) < 0) {
+        Py_DECREF(right);
+        assert(true); // (matthew) replace error with assertion
+    }
+    int res = PyErr_GivenExceptionMatches(left, right);
+    Py_DECREF(right);
+    b = res ? Py_True : Py_False;
+
+    // (matthew) begin return
+    two_value_return.first = left;
+    two_value_return.second = b;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: IMPORT_NAME
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_IMPORT_NAME" (func $handler_IMPORT_NAME (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_IMPORT_NAME")))
+PyObject *handler_IMPORT_NAME(int oparg, PyObject *level, PyObject *fromlist);
+
+PyObject *handler_IMPORT_NAME(int oparg, PyObject *level, PyObject *fromlist) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    res = import_name(tstate, frame, name, fromlist, level);
+    Py_DECREF(level);
+    Py_DECREF(fromlist);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: IMPORT_FROM
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_IMPORT_FROM" (func $handler_IMPORT_FROM (param i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_IMPORT_FROM")))
+struct two_values handler_IMPORT_FROM(int oparg, PyObject *from);
+
+struct two_values handler_IMPORT_FROM(int oparg, PyObject *from) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    res = import_from(tstate, from, name);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    two_value_return.first = from;
+    two_value_return.second = res;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: JUMP_FORWARD
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_JUMP_FORWARD" (func $handler_JUMP_FORWARD (param i32) (result)))
+
+__attribute__ ((export_name("handler_JUMP_FORWARD")))
+void handler_JUMP_FORWARD(int oparg);
+
+void handler_JUMP_FORWARD(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    JUMPBY(oparg);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: JUMP_BACKWARD
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: True
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_JUMP_BACKWARD" (func $handler_JUMP_BACKWARD (param i32) (result)))
+
+__attribute__ ((export_name("handler_JUMP_BACKWARD")))
+void handler_JUMP_BACKWARD(int oparg);
+
+void handler_JUMP_BACKWARD(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    CHECK_EVAL_BREAKER();
+    assert(oparg <= INSTR_OFFSET());
+    JUMPBY(-oparg);
+    #ifdef _Py_TIER2
+    #if ENABLE_SPECIALIZATION
+    _Py_BackoffCounter counter = this_instr[1].counter;
+    if (backoff_counter_triggers(counter) && this_instr->op.code == JUMP_BACKWARD) {
+        _Py_CODEUNIT *start = this_instr;
+        /* Back up over EXTENDED_ARGs so optimizer sees the whole instruction */
+        while (oparg > 255) {
+            oparg >>= 8;
+            start--;
+        }
+        _PyExecutorObject *executor;
+        int optimized = _PyOptimizer_Optimize(frame, start, stack_pointer, &executor);
+        assert(optimized < 0); // (matthew) replace error with assertion
+        if (optimized) {
+            assert(tstate->previous_executor == NULL);
+            tstate->previous_executor = Py_None;
+            GOTO_TIER_TWO(executor);
+        }
+        else {
+            this_instr[1].counter = restart_backoff_counter(counter);
+        }
+    }
+    else {
+        ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
+    }
+    #endif  /* ENABLE_SPECIALIZATION */
+    #endif /* _Py_TIER2 */
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: ENTER_EXECUTOR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_ENTER_EXECUTOR" (func $handler_ENTER_EXECUTOR (param i32) (result)))
+
+__attribute__ ((export_name("handler_ENTER_EXECUTOR")))
+void handler_ENTER_EXECUTOR(int oparg);
+
+void handler_ENTER_EXECUTOR(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    #ifdef _Py_TIER2
+    PyCodeObject *code = _PyFrame_GetCode(frame);
+    _PyExecutorObject *executor = code->co_executors->executors[oparg & 255];
+    assert(executor->vm_data.index == INSTR_OFFSET() - 1);
+    assert(executor->vm_data.code == code);
+    assert(executor->vm_data.valid);
+    assert(tstate->previous_executor == NULL);
+    /* If the eval breaker is set then stay in tier 1.
+     * This avoids any potentially infinite loops
+     * involving _RESUME_CHECK */
+    if (_Py_atomic_load_uintptr_relaxed(&tstate->eval_breaker) & _PY_EVAL_EVENTS_MASK) {
+        opcode = executor->vm_data.opcode;
+        oparg = (oparg & ~255) | executor->vm_data.oparg;
+        next_instr = this_instr;
+        if (_PyOpcode_Caches[_PyOpcode_Deopt[opcode]]) {
+            PAUSE_ADAPTIVE_COUNTER(this_instr[1].counter);
+        }
+        DISPATCH_GOTO();
+    }
+    tstate->previous_executor = Py_None;
+    Py_INCREF(executor);
+    GOTO_TIER_TWO(executor);
+    #else
+    Py_FatalError("ENTER_EXECUTOR is not supported in this build");
+    #endif /* _Py_TIER2 */
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: JUMP_BACKWARD_NO_INTERRUPT
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_JUMP_BACKWARD_NO_INTERRUPT" (func $handler_JUMP_BACKWARD_NO_INTERRUPT (param i32) (result)))
+
+__attribute__ ((export_name("handler_JUMP_BACKWARD_NO_INTERRUPT")))
+void handler_JUMP_BACKWARD_NO_INTERRUPT(int oparg);
+
+void handler_JUMP_BACKWARD_NO_INTERRUPT(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    /* This bytecode is used in the `yield from` or `await` loop.
+     * If there is an interrupt, we want it handled in the innermost
+     * generator or coroutine, so we deliberately do not check it here.
+     * (see bpo-30039).
+     */
+    JUMPBY(-oparg);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: GET_LEN
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_GET_LEN" (func $handler_GET_LEN (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_GET_LEN")))
+struct two_values handler_GET_LEN(PyObject *obj);
+
+struct two_values handler_GET_LEN(PyObject *obj) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *len_o;
+    // (matthew) end emitting space for return
+
+    // PUSH(len(TOS))
+    Py_ssize_t len_i = PyObject_Length(obj);
+    assert(len_i < 0); // (matthew) replace error with assertion
+    len_o = PyLong_FromSsize_t(len_i);
+    assert(len_o == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    two_value_return.first = obj;
+    two_value_return.second = len_o;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: MATCH_CLASS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_MATCH_CLASS" (func $handler_MATCH_CLASS (param i32 i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_MATCH_CLASS")))
+PyObject *handler_MATCH_CLASS(int oparg, PyObject *subject, PyObject *type, PyObject *names);
+
+PyObject *handler_MATCH_CLASS(int oparg, PyObject *subject, PyObject *type, PyObject *names) {
+    // (matthew) begin emitting space for return
+    PyObject *attrs;
+    // (matthew) end emitting space for return
+
+    // Pop TOS and TOS1. Set TOS to a tuple of attributes on success, or
+    // None on failure.
+    assert(PyTuple_CheckExact(names));
+    attrs = _PyEval_MatchClass(tstate, subject, type, oparg, names);
+    Py_DECREF(subject);
+    Py_DECREF(type);
+    Py_DECREF(names);
+    if (attrs) {
+        assert(PyTuple_CheckExact(attrs));  // Success!
+    }
+    else {
+        assert(_PyErr_Occurred(tstate)); // (matthew) replace error with assertion
+        // Error!
+        attrs = Py_None;  // Failure!
+    }
+
+    // (matthew) begin return
+    return attrs;
+}
+
+/* ------------------------
+ * OPCODE: MATCH_MAPPING
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_MATCH_MAPPING" (func $handler_MATCH_MAPPING (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_MATCH_MAPPING")))
+struct two_values handler_MATCH_MAPPING(PyObject *subject);
+
+struct two_values handler_MATCH_MAPPING(PyObject *subject) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    int match = Py_TYPE(subject)->tp_flags & Py_TPFLAGS_MAPPING;
+    res = match ? Py_True : Py_False;
+
+    // (matthew) begin return
+    two_value_return.first = subject;
+    two_value_return.second = res;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: MATCH_SEQUENCE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_MATCH_SEQUENCE" (func $handler_MATCH_SEQUENCE (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_MATCH_SEQUENCE")))
+struct two_values handler_MATCH_SEQUENCE(PyObject *subject);
+
+struct two_values handler_MATCH_SEQUENCE(PyObject *subject) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    int match = Py_TYPE(subject)->tp_flags & Py_TPFLAGS_SEQUENCE;
+    res = match ? Py_True : Py_False;
+
+    // (matthew) begin return
+    two_value_return.first = subject;
+    two_value_return.second = res;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: MATCH_KEYS
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_MATCH_KEYS" (func $handler_MATCH_KEYS (param i32 i32) (result i32 i32 i32)))
+
+// >>#!@#@! SKIPPING because there are more than 2 outputs
+
+/* ------------------------
+ * OPCODE: GET_ITER
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_GET_ITER" (func $handler_GET_ITER (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_GET_ITER")))
+PyObject *handler_GET_ITER(PyObject *iterable);
+
+PyObject *handler_GET_ITER(PyObject *iterable) {
+    // (matthew) begin emitting space for return
+    PyObject *iter;
+    // (matthew) end emitting space for return
+
+    /* before: [obj]; after [getiter(obj)] */
+    iter = PyObject_GetIter(iterable);
+    Py_DECREF(iterable);
+    assert(iter == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return iter;
+}
+
+/* ------------------------
+ * OPCODE: GET_YIELD_FROM_ITER
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_GET_YIELD_FROM_ITER" (func $handler_GET_YIELD_FROM_ITER (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_GET_YIELD_FROM_ITER")))
+PyObject *handler_GET_YIELD_FROM_ITER(PyObject *iterable);
+
+PyObject *handler_GET_YIELD_FROM_ITER(PyObject *iterable) {
+    // (matthew) begin emitting space for return
+    PyObject *iter;
+    // (matthew) end emitting space for return
+
+    /* before: [obj]; after [getiter(obj)] */
+    if (PyCoro_CheckExact(iterable)) {
+        /* `iterable` is a coroutine */
+        if (!(_PyFrame_GetCode(frame)->co_flags & (CO_COROUTINE | CO_ITERABLE_COROUTINE))) {
+            /* and it is used in a 'yield from' expression of a
+               regular generator. */
+            _PyErr_SetString(tstate, PyExc_TypeError,
+                                     "cannot 'yield from' a coroutine object "
+                                     "in a non-coroutine generator");
+            ERROR_NO_POP();
+        }
+        iter = iterable;
+    }
+    else if (PyGen_CheckExact(iterable)) {
+        iter = iterable;
+    }
+    else {
+        /* `iterable` is not a generator. */
+        iter = PyObject_GetIter(iterable);
+        if (iter == NULL) {
+            ERROR_NO_POP();
+        }
+        Py_DECREF(iterable);
+    }
+
+    // (matthew) begin return
+    return iter;
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_FOR_ITER
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_INSTRUMENTED_FOR_ITER" (func $handler_INSTRUMENTED_FOR_ITER (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_FOR_ITER")))
+void handler_INSTRUMENTED_FOR_ITER(int oparg);
+
+void handler_INSTRUMENTED_FOR_ITER(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    _Py_CODEUNIT *target;
+    PyObject *iter = TOP();
+    PyObject *next = (*Py_TYPE(iter)->tp_iternext)(iter);
+    if (next != NULL) {
+        PUSH(next);
+        target = next_instr;
+    }
+    else {
+        if (_PyErr_Occurred(tstate)) {
+            if (!_PyErr_ExceptionMatches(tstate, PyExc_StopIteration)) {
+                ERROR_NO_POP();
+            }
+            _PyEval_MonitorRaise(tstate, frame, this_instr);
+            _PyErr_Clear(tstate);
+        }
+        /* iterator ended normally */
+        assert(next_instr[oparg].op.code == END_FOR ||
+                       next_instr[oparg].op.code == INSTRUMENTED_END_FOR);
+        STACK_SHRINK(1);
+        Py_DECREF(iter);
+        /* Skip END_FOR and POP_TOP */
+        target = next_instr + oparg + 2;
+    }
+    INSTRUMENTED_JUMP(this_instr, target, PY_MONITORING_EVENT_BRANCH);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: BEFORE_ASYNC_WITH
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BEFORE_ASYNC_WITH" (func $handler_BEFORE_ASYNC_WITH (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_BEFORE_ASYNC_WITH")))
+struct two_values handler_BEFORE_ASYNC_WITH(PyObject *mgr);
+
+struct two_values handler_BEFORE_ASYNC_WITH(PyObject *mgr) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *exit;
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    PyObject *enter = _PyObject_LookupSpecial(mgr, &_Py_ID(__aenter__));
+    if (enter == NULL) {
+        if (!_PyErr_Occurred(tstate)) {
+            _PyErr_Format(tstate, PyExc_TypeError,
+                                  "'%.200s' object does not support the "
+                                  "asynchronous context manager protocol",
+                                  Py_TYPE(mgr)->tp_name);
+        }
+        ERROR_NO_POP();
+    }
+    exit = _PyObject_LookupSpecial(mgr, &_Py_ID(__aexit__));
+    if (exit == NULL) {
+        if (!_PyErr_Occurred(tstate)) {
+            _PyErr_Format(tstate, PyExc_TypeError,
+                                  "'%.200s' object does not support the "
+                                  "asynchronous context manager protocol "
+                                  "(missed __aexit__ method)",
+                                  Py_TYPE(mgr)->tp_name);
+        }
+        Py_DECREF(enter);
+        ERROR_NO_POP();
+    }
+    Py_DECREF(mgr);
+    res = PyObject_CallNoArgs(enter);
+    Py_DECREF(enter);
+    if (res == NULL) {
+        Py_DECREF(exit);
+        assert(true); // (matthew) replace error with assertion
+    }
+
+    // (matthew) begin return
+    two_value_return.first = exit;
+    two_value_return.second = res;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: BEFORE_WITH
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BEFORE_WITH" (func $handler_BEFORE_WITH (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_BEFORE_WITH")))
+struct two_values handler_BEFORE_WITH(PyObject *mgr);
+
+struct two_values handler_BEFORE_WITH(PyObject *mgr) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *exit;
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    /* pop the context manager, push its __exit__ and the
+     * value returned from calling its __enter__
+     */
+    PyObject *enter = _PyObject_LookupSpecial(mgr, &_Py_ID(__enter__));
+    if (enter == NULL) {
+        if (!_PyErr_Occurred(tstate)) {
+            _PyErr_Format(tstate, PyExc_TypeError,
+                                  "'%.200s' object does not support the "
+                                  "context manager protocol",
+                                  Py_TYPE(mgr)->tp_name);
+        }
+        ERROR_NO_POP();
+    }
+    exit = _PyObject_LookupSpecial(mgr, &_Py_ID(__exit__));
+    if (exit == NULL) {
+        if (!_PyErr_Occurred(tstate)) {
+            _PyErr_Format(tstate, PyExc_TypeError,
+                                  "'%.200s' object does not support the "
+                                  "context manager protocol "
+                                  "(missed __exit__ method)",
+                                  Py_TYPE(mgr)->tp_name);
+        }
+        Py_DECREF(enter);
+        ERROR_NO_POP();
+    }
+    Py_DECREF(mgr);
+    res = PyObject_CallNoArgs(enter);
+    Py_DECREF(enter);
+    if (res == NULL) {
+        Py_DECREF(exit);
+        assert(true); // (matthew) replace error with assertion
+    }
+
+    // (matthew) begin return
+    two_value_return.first = exit;
+    two_value_return.second = res;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: WITH_EXCEPT_START
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_WITH_EXCEPT_START" (func $handler_WITH_EXCEPT_START (param i32 i32 i32 i32) (result i32 i32 i32 i32 i32)))
+
+// >>#!@#@! SKIPPING because there are more than 2 outputs
+
+/* ------------------------
+ * OPCODE: PUSH_EXC_INFO
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_PUSH_EXC_INFO" (func $handler_PUSH_EXC_INFO (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_PUSH_EXC_INFO")))
+struct two_values handler_PUSH_EXC_INFO(PyObject *new_exc);
+
+struct two_values handler_PUSH_EXC_INFO(PyObject *new_exc) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *prev_exc;
+    // (matthew) end emitting space for return
+
+    _PyErr_StackItem *exc_info = tstate->exc_info;
+    if (exc_info->exc_value != NULL) {
+        prev_exc = exc_info->exc_value;
+    }
+    else {
+        prev_exc = Py_None;
+    }
+    assert(PyExceptionInstance_Check(new_exc));
+    exc_info->exc_value = Py_NewRef(new_exc);
+
+    // (matthew) begin return
+    two_value_return.first = prev_exc;
+    two_value_return.second = new_exc;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_CALL
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/3
+
+// (import "python" "handler_INSTRUMENTED_CALL" (func $handler_INSTRUMENTED_CALL (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_CALL")))
+void handler_INSTRUMENTED_CALL(int oparg);
+
+void handler_INSTRUMENTED_CALL(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    int is_meth = PEEK(oparg + 1) != NULL;
+    int total_args = oparg + is_meth;
+    PyObject *function = PEEK(oparg + 2);
+    PyObject *arg = total_args == 0 ?
+    &_PyInstrumentation_MISSING : PEEK(total_args);
+    int err = _Py_call_instrumentation_2args(
+        tstate, PY_MONITORING_EVENT_CALL,
+        frame, this_instr, function, arg);
+    assert(err); // (matthew) replace error with assertion
+    PAUSE_ADAPTIVE_COUNTER(this_instr[1].counter);
+    GO_TO_INSTRUCTION(CALL);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: EXIT_INIT_CHECK
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_EXIT_INIT_CHECK" (func $handler_EXIT_INIT_CHECK (param i32) (result)))
+
+__attribute__ ((export_name("handler_EXIT_INIT_CHECK")))
+void handler_EXIT_INIT_CHECK(PyObject *should_be_none);
+
+void handler_EXIT_INIT_CHECK(PyObject *should_be_none) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(STACK_LEVEL() == 2);
+    if (should_be_none != Py_None) {
+        PyErr_Format(PyExc_TypeError,
+                             "__init__() should return None, not '%.200s'",
+                             Py_TYPE(should_be_none)->tp_name);
+        ERROR_NO_POP();
+    }
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_CALL_KW
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_CALL_KW" (func $handler_INSTRUMENTED_CALL_KW (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_CALL_KW")))
+void handler_INSTRUMENTED_CALL_KW(int oparg);
+
+void handler_INSTRUMENTED_CALL_KW(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    int is_meth = PEEK(oparg + 2) != NULL;
+    int total_args = oparg + is_meth;
+    PyObject *function = PEEK(oparg + 3);
+    PyObject *arg = total_args == 0 ? &_PyInstrumentation_MISSING
+: PEEK(total_args + 1);
+    int err = _Py_call_instrumentation_2args(
+        tstate, PY_MONITORING_EVENT_CALL,
+        frame, this_instr, function, arg);
+    assert(err); // (matthew) replace error with assertion
+    GO_TO_INSTRUCTION(CALL_KW);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: CALL_KW
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: True
+ *   ends_with_eval_breaker: True
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CALL_KW" (func $handler_CALL_KW (param i32 i32 i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_CALL_KW")))
+PyObject *handler_CALL_KW(int oparg, PyObject *callable, PyObject *self_or_null, PyObject **args, PyObject *kwnames);
+
+PyObject *handler_CALL_KW(int oparg, PyObject *callable, PyObject *self_or_null, PyObject **args, PyObject *kwnames) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    // oparg counts all of the args, but *not* self:
+    int total_args = oparg;
+    if (self_or_null != NULL) {
+        args--;
+        total_args++;
+    }
+    if (self_or_null == NULL && Py_TYPE(callable) == &PyMethod_Type) {
+        args--;
+        total_args++;
+        PyObject *self = ((PyMethodObject *)callable)->im_self;
+        args[0] = Py_NewRef(self);
+        PyObject *method = ((PyMethodObject *)callable)->im_func;
+        args[-1] = Py_NewRef(method);
+        Py_DECREF(callable);
+        callable = method;
+    }
+    int positional_args = total_args - (int)PyTuple_GET_SIZE(kwnames);
+    // Check if the call can be inlined or not
+    if (Py_TYPE(callable) == &PyFunction_Type &&
+                tstate->interp->eval_frame == NULL &&
+                ((PyFunctionObject *)callable)->vectorcall == _PyFunction_Vectorcall)
+    {
+        int code_flags = ((PyCodeObject*)PyFunction_GET_CODE(callable))->co_flags;
+        PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(callable));
+        _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+            tstate, (PyFunctionObject *)callable, locals,
+            args, positional_args, kwnames
+        );
+        Py_DECREF(kwnames);
+        // Manipulate stack directly since we leave using DISPATCH_INLINED().
+        STACK_SHRINK(oparg + 3);
+        // The frame has stolen all the arguments from the stack,
+        // so there is no need to clean them up.
+        if (new_frame == NULL) {
+            ERROR_NO_POP();
+        }
+        assert(next_instr - this_instr == 1);
+        frame->return_offset = 1;
+        DISPATCH_INLINED(new_frame);
+    }
+    /* Callable is not a normal Python function */
+    res = PyObject_Vectorcall(
+                                      callable, args,
+                                      positional_args | PY_VECTORCALL_ARGUMENTS_OFFSET,
+                                      kwnames);
+    if (opcode == INSTRUMENTED_CALL_KW) {
+        PyObject *arg = total_args == 0 ?
+        &_PyInstrumentation_MISSING : args[0];
+        if (res == NULL) {
+            _Py_call_instrumentation_exc2(
+                tstate, PY_MONITORING_EVENT_C_RAISE,
+                frame, this_instr, callable, arg);
+        }
+        else {
+            int err = _Py_call_instrumentation_2args(
+                tstate, PY_MONITORING_EVENT_C_RETURN,
+                frame, this_instr, callable, arg);
+            if (err < 0) {
+                Py_CLEAR(res);
+            }
+        }
+    }
+    Py_DECREF(kwnames);
+    assert((res != NULL) ^ (_PyErr_Occurred(tstate) != NULL));
+    Py_DECREF(callable);
+    for (int i = 0; i < total_args; i++) {
+        Py_DECREF(args[i]);
+    }
+    assert(res == NULL); // (matthew) replace error with assertion
+    CHECK_EVAL_BREAKER();
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_CALL_FUNCTION_EX
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_CALL_FUNCTION_EX" (func $handler_INSTRUMENTED_CALL_FUNCTION_EX (param) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_CALL_FUNCTION_EX")))
+void handler_INSTRUMENTED_CALL_FUNCTION_EX(void);
+
+void handler_INSTRUMENTED_CALL_FUNCTION_EX(void) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    GO_TO_INSTRUCTION(CALL_FUNCTION_EX);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: CALL_FUNCTION_EX
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: True
+ *   ends_with_eval_breaker: True
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CALL_FUNCTION_EX" (func $handler_CALL_FUNCTION_EX (param i32 i32 i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_CALL_FUNCTION_EX")))
+PyObject *handler_CALL_FUNCTION_EX(int oparg, PyObject *func, PyObject *unused, PyObject *callargs, PyObject *kwargs);
+
+PyObject *handler_CALL_FUNCTION_EX(int oparg, PyObject *func, PyObject *unused, PyObject *callargs, PyObject *kwargs) {
+    // (matthew) begin emitting space for return
+    PyObject *result;
+    // (matthew) end emitting space for return
+
+    // DICT_MERGE is called before this opcode if there are kwargs.
+    // It converts all dict subtypes in kwargs into regular dicts.
+    assert(kwargs == NULL || PyDict_CheckExact(kwargs));
+    if (!PyTuple_CheckExact(callargs)) {
+        if (check_args_iterable(tstate, func, callargs) < 0) {
+            ERROR_NO_POP();
+        }
+        PyObject *tuple = PySequence_Tuple(callargs);
+        if (tuple == NULL) {
+            ERROR_NO_POP();
+        }
+        Py_SETREF(callargs, tuple);
+    }
+    assert(PyTuple_CheckExact(callargs));
+    EVAL_CALL_STAT_INC_IF_FUNCTION(EVAL_CALL_FUNCTION_EX, func);
+    if (opcode == INSTRUMENTED_CALL_FUNCTION_EX) {
+        PyObject *arg = PyTuple_GET_SIZE(callargs) > 0 ?
+        PyTuple_GET_ITEM(callargs, 0) : &_PyInstrumentation_MISSING;
+        int err = _Py_call_instrumentation_2args(
+            tstate, PY_MONITORING_EVENT_CALL,
+            frame, this_instr, func, arg);
+        if (err) ERROR_NO_POP();
+        result = PyObject_Call(func, callargs, kwargs);
+        if (!PyFunction_Check(func) && !PyMethod_Check(func)) {
+            if (result == NULL) {
+                _Py_call_instrumentation_exc2(
+                    tstate, PY_MONITORING_EVENT_C_RAISE,
+                    frame, this_instr, func, arg);
+            }
+            else {
+                int err = _Py_call_instrumentation_2args(
+                    tstate, PY_MONITORING_EVENT_C_RETURN,
+                    frame, this_instr, func, arg);
+                if (err < 0) {
+                    Py_CLEAR(result);
+                }
+            }
+        }
+    }
+    else {
+        if (Py_TYPE(func) == &PyFunction_Type &&
+                    tstate->interp->eval_frame == NULL &&
+                    ((PyFunctionObject *)func)->vectorcall == _PyFunction_Vectorcall) {
+            assert(PyTuple_CheckExact(callargs));
+            Py_ssize_t nargs = PyTuple_GET_SIZE(callargs);
+            int code_flags = ((PyCodeObject *)PyFunction_GET_CODE(func))->co_flags;
+            PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(func));
+            _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit_Ex(tstate,
+                (PyFunctionObject *)func, locals,
+                nargs, callargs, kwargs);
+            // Need to manually shrink the stack since we exit with DISPATCH_INLINED.
+            STACK_SHRINK(oparg + 3);
+            if (new_frame == NULL) {
+                ERROR_NO_POP();
+            }
+            assert(next_instr - this_instr == 1);
+            frame->return_offset = 1;
+            DISPATCH_INLINED(new_frame);
+        }
+        result = PyObject_Call(func, callargs, kwargs);
+    }
+    Py_DECREF(func);
+    Py_DECREF(callargs);
+    Py_XDECREF(kwargs);
+    assert(PEEK(2 + (oparg & 1)) == NULL);
+    assert(result == NULL); // (matthew) replace error with assertion
+    CHECK_EVAL_BREAKER();
+
+    // (matthew) begin return
+    return result;
+}
+
+/* ------------------------
+ * OPCODE: MAKE_FUNCTION
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_MAKE_FUNCTION" (func $handler_MAKE_FUNCTION (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_MAKE_FUNCTION")))
+PyObject *handler_MAKE_FUNCTION(PyObject *codeobj);
+
+PyObject *handler_MAKE_FUNCTION(PyObject *codeobj) {
+    // (matthew) begin emitting space for return
+    PyObject *func;
+    // (matthew) end emitting space for return
+
+    PyFunctionObject *func_obj = (PyFunctionObject *)
+    PyFunction_New(codeobj, GLOBALS());
+    Py_DECREF(codeobj);
+    if (func_obj == NULL) {
+        ERROR_NO_POP();
+    }
+    _PyFunction_SetVersion(
+                                   func_obj, ((PyCodeObject *)codeobj)->co_version);
+    func = (PyObject *)func_obj;
+
+    // (matthew) begin return
+    return func;
+}
+
+/* ------------------------
+ * OPCODE: SET_FUNCTION_ATTRIBUTE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_SET_FUNCTION_ATTRIBUTE" (func $handler_SET_FUNCTION_ATTRIBUTE (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_SET_FUNCTION_ATTRIBUTE")))
+PyObject *handler_SET_FUNCTION_ATTRIBUTE(int oparg, PyObject *attr, PyObject *func);
+
+PyObject *handler_SET_FUNCTION_ATTRIBUTE(int oparg, PyObject *attr, PyObject *func) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(PyFunction_Check(func));
+    PyFunctionObject *func_obj = (PyFunctionObject *)func;
+    switch(oparg) {
+        case MAKE_FUNCTION_CLOSURE:
+        assert(func_obj->func_closure == NULL);
+        func_obj->func_closure = attr;
+        break;
+        case MAKE_FUNCTION_ANNOTATIONS:
+        assert(func_obj->func_annotations == NULL);
+        func_obj->func_annotations = attr;
+        break;
+        case MAKE_FUNCTION_KWDEFAULTS:
+        assert(PyDict_CheckExact(attr));
+        assert(func_obj->func_kwdefaults == NULL);
+        func_obj->func_kwdefaults = attr;
+        break;
+        case MAKE_FUNCTION_DEFAULTS:
+        assert(PyTuple_CheckExact(attr));
+        assert(func_obj->func_defaults == NULL);
+        func_obj->func_defaults = attr;
+        break;
+        default:
+        Py_UNREACHABLE();
+    }
+
+    // (matthew) begin return
+    return func;
+}
+
+/* ------------------------
+ * OPCODE: RETURN_GENERATOR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_RETURN_GENERATOR" (func $handler_RETURN_GENERATOR (param) (result i32)))
+
+__attribute__ ((export_name("handler_RETURN_GENERATOR")))
+PyObject *handler_RETURN_GENERATOR(void);
+
+PyObject *handler_RETURN_GENERATOR(void) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    assert(PyFunction_Check(frame->f_funcobj));
+    PyFunctionObject *func = (PyFunctionObject *)frame->f_funcobj;
+    PyGenObject *gen = (PyGenObject *)_Py_MakeCoro(func);
+    if (gen == NULL) {
+        ERROR_NO_POP();
+    }
+    assert(EMPTY());
+    _PyFrame_SetStackPointer(frame, stack_pointer);
+    _PyInterpreterFrame *gen_frame = (_PyInterpreterFrame *)gen->gi_iframe;
+    frame->instr_ptr++;
+    _PyFrame_Copy(frame, gen_frame);
+    assert(frame->frame_obj == NULL);
+    gen->gi_frame_state = FRAME_CREATED;
+    gen_frame->owner = FRAME_OWNED_BY_GENERATOR;
+    _Py_LeaveRecursiveCallPy(tstate);
+    res = (PyObject *)gen;
+    _PyInterpreterFrame *prev = frame->previous;
+    _PyThreadState_PopFrame(tstate, frame);
+    frame = tstate->current_frame = prev;
+    LOAD_IP(frame->return_offset);
+    LOAD_SP();
+    LLTRACE_RESUME_FRAME();
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: BUILD_SLICE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_BUILD_SLICE" (func $handler_BUILD_SLICE (param i32 i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BUILD_SLICE")))
+PyObject *handler_BUILD_SLICE(int oparg, PyObject *start, PyObject *stop, PyObject *step);
+
+PyObject *handler_BUILD_SLICE(int oparg, PyObject *start, PyObject *stop, PyObject *step) {
+    // (matthew) begin emitting space for return
+    PyObject *slice;
+    // (matthew) end emitting space for return
+
+    slice = PySlice_New(start, stop, step);
+    Py_DECREF(start);
+    Py_DECREF(stop);
+    Py_XDECREF(step);
+    assert(slice == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return slice;
+}
+
+/* ------------------------
+ * OPCODE: CONVERT_VALUE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CONVERT_VALUE" (func $handler_CONVERT_VALUE (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_CONVERT_VALUE")))
+PyObject *handler_CONVERT_VALUE(int oparg, PyObject *value);
+
+PyObject *handler_CONVERT_VALUE(int oparg, PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *result;
+    // (matthew) end emitting space for return
+
+    conversion_func conv_fn;
+    assert(oparg >= FVC_STR && oparg <= FVC_ASCII);
+    conv_fn = _PyEval_ConversionFuncs[oparg];
+    result = conv_fn(value);
+    Py_DECREF(value);
+    assert(result == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return result;
+}
+
+/* ------------------------
+ * OPCODE: FORMAT_SIMPLE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_FORMAT_SIMPLE" (func $handler_FORMAT_SIMPLE (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_FORMAT_SIMPLE")))
+PyObject *handler_FORMAT_SIMPLE(PyObject *value);
+
+PyObject *handler_FORMAT_SIMPLE(PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    /* If value is a unicode object, then we know the result
+     * of format(value) is value itself. */
+    if (!PyUnicode_CheckExact(value)) {
+        res = PyObject_Format(value, NULL);
+        Py_DECREF(value);
+        assert(res == NULL); // (matthew) replace error with assertion
+    }
+    else {
+        res = value;
+    }
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: FORMAT_WITH_SPEC
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_FORMAT_WITH_SPEC" (func $handler_FORMAT_WITH_SPEC (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_FORMAT_WITH_SPEC")))
+PyObject *handler_FORMAT_WITH_SPEC(PyObject *value, PyObject *fmt_spec);
+
+PyObject *handler_FORMAT_WITH_SPEC(PyObject *value, PyObject *fmt_spec) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    res = PyObject_Format(value, fmt_spec);
+    Py_DECREF(value);
+    Py_DECREF(fmt_spec);
+    assert(res == NULL); // (matthew) replace error with assertion
+
 
     // (matthew) begin return
     return res;
@@ -274,10 +5536,11 @@ PyObject *handler_UNARY_NOT(PyObject *value) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_COPY" (func $handler_COPY (param i32 i32 i32) (result i32 i32 i32)))
 
->>#!@#@! SKIPPING because there are more than 2 outputs
+// >>#!@#@! SKIPPING because there are more than 2 outputs
 
 /* ------------------------
  * OPCODE: SWAP
@@ -303,10 +5566,482 @@ PyObject *handler_UNARY_NOT(PyObject *value) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_SWAP" (func $handler_SWAP (param i32 i32 i32 i32) (result i32 i32 i32)))
 
->>#!@#@! SKIPPING because there are more than 2 outputs
+// >>#!@#@! SKIPPING because there are more than 2 outputs
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_INSTRUCTION
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_INSTRUCTION" (func $handler_INSTRUMENTED_INSTRUCTION (param) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_INSTRUCTION")))
+void handler_INSTRUMENTED_INSTRUCTION(void);
+
+void handler_INSTRUMENTED_INSTRUCTION(void) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    int next_opcode = _Py_call_instrumentation_instruction(
+        tstate, frame, this_instr);
+    assert(next_opcode < 0); // (matthew) replace error with assertion
+    next_instr = this_instr;
+    if (_PyOpcode_Caches[next_opcode]) {
+        PAUSE_ADAPTIVE_COUNTER(next_instr[1].counter);
+    }
+    assert(next_opcode > 0 && next_opcode < 256);
+    opcode = next_opcode;
+    DISPATCH_GOTO();
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_JUMP_FORWARD
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_INSTRUMENTED_JUMP_FORWARD" (func $handler_INSTRUMENTED_JUMP_FORWARD (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_JUMP_FORWARD")))
+void handler_INSTRUMENTED_JUMP_FORWARD(int oparg);
+
+void handler_INSTRUMENTED_JUMP_FORWARD(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    INSTRUMENTED_JUMP(this_instr, next_instr + oparg, PY_MONITORING_EVENT_JUMP);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_JUMP_BACKWARD
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: True
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_INSTRUMENTED_JUMP_BACKWARD" (func $handler_INSTRUMENTED_JUMP_BACKWARD (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_JUMP_BACKWARD")))
+void handler_INSTRUMENTED_JUMP_BACKWARD(int oparg);
+
+void handler_INSTRUMENTED_JUMP_BACKWARD(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    CHECK_EVAL_BREAKER();
+    INSTRUMENTED_JUMP(this_instr, next_instr - oparg, PY_MONITORING_EVENT_JUMP);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_POP_JUMP_IF_TRUE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_INSTRUMENTED_POP_JUMP_IF_TRUE" (func $handler_INSTRUMENTED_POP_JUMP_IF_TRUE (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_POP_JUMP_IF_TRUE")))
+void handler_INSTRUMENTED_POP_JUMP_IF_TRUE(int oparg);
+
+void handler_INSTRUMENTED_POP_JUMP_IF_TRUE(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *cond = POP();
+    assert(PyBool_Check(cond));
+    int flag = Py_IsTrue(cond);
+    int offset = flag * oparg;
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | flag;
+    #endif
+    INSTRUMENTED_JUMP(this_instr, next_instr + offset, PY_MONITORING_EVENT_BRANCH);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_POP_JUMP_IF_FALSE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_INSTRUMENTED_POP_JUMP_IF_FALSE" (func $handler_INSTRUMENTED_POP_JUMP_IF_FALSE (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_POP_JUMP_IF_FALSE")))
+void handler_INSTRUMENTED_POP_JUMP_IF_FALSE(int oparg);
+
+void handler_INSTRUMENTED_POP_JUMP_IF_FALSE(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *cond = POP();
+    assert(PyBool_Check(cond));
+    int flag = Py_IsFalse(cond);
+    int offset = flag * oparg;
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | flag;
+    #endif
+    INSTRUMENTED_JUMP(this_instr, next_instr + offset, PY_MONITORING_EVENT_BRANCH);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_POP_JUMP_IF_NONE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_INSTRUMENTED_POP_JUMP_IF_NONE" (func $handler_INSTRUMENTED_POP_JUMP_IF_NONE (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_POP_JUMP_IF_NONE")))
+void handler_INSTRUMENTED_POP_JUMP_IF_NONE(int oparg);
+
+void handler_INSTRUMENTED_POP_JUMP_IF_NONE(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *value = POP();
+    int flag = Py_IsNone(value);
+    int offset;
+    if (flag) {
+        offset = oparg;
+    }
+    else {
+        Py_DECREF(value);
+        offset = 0;
+    }
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | flag;
+    #endif
+    INSTRUMENTED_JUMP(this_instr, next_instr + offset, PY_MONITORING_EVENT_BRANCH);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: INSTRUMENTED_POP_JUMP_IF_NOT_NONE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_INSTRUMENTED_POP_JUMP_IF_NOT_NONE" (func $handler_INSTRUMENTED_POP_JUMP_IF_NOT_NONE (param i32) (result)))
+
+__attribute__ ((export_name("handler_INSTRUMENTED_POP_JUMP_IF_NOT_NONE")))
+void handler_INSTRUMENTED_POP_JUMP_IF_NOT_NONE(int oparg);
+
+void handler_INSTRUMENTED_POP_JUMP_IF_NOT_NONE(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *value = POP();
+    int offset;
+    int nflag = Py_IsNone(value);
+    if (nflag) {
+        offset = 0;
+    }
+    else {
+        Py_DECREF(value);
+        offset = oparg;
+    }
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | !nflag;
+    #endif
+    INSTRUMENTED_JUMP(this_instr, next_instr + offset, PY_MONITORING_EVENT_BRANCH);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: EXTENDED_ARG
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: True
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_EXTENDED_ARG" (func $handler_EXTENDED_ARG (param i32) (result)))
+
+__attribute__ ((export_name("handler_EXTENDED_ARG")))
+void handler_EXTENDED_ARG(int oparg);
+
+void handler_EXTENDED_ARG(int oparg) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(oparg);
+    opcode = next_instr->op.code;
+    oparg = oparg << 8 | next_instr->op.arg;
+    PRE_DISPATCH_GOTO();
+    DISPATCH_GOTO();
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: CACHE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_CACHE" (func $handler_CACHE (param) (result)))
+
+__attribute__ ((export_name("handler_CACHE")))
+void handler_CACHE(void);
+
+void handler_CACHE(void) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(0 && "Executing a cache.");
+    Py_FatalError("Executing a cache.");
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: RESERVED
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_RESERVED" (func $handler_RESERVED (param) (result)))
+
+__attribute__ ((export_name("handler_RESERVED")))
+void handler_RESERVED(void);
+
+void handler_RESERVED(void) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(0 && "Executing RESERVED instruction.");
+    Py_FatalError("Executing RESERVED instruction.");
+
+    // (matthew) begin return
+}
 
 /* ------------------------
  * OPCODE: END_FOR
@@ -332,6 +6067,7 @@ PyObject *handler_UNARY_NOT(PyObject *value) {
  *   oparg_and_1: False
  *   const_oparg: -1
  */
+// @@@!!
 
 // (import "python" "handler_POP_TOP" (func $handler_POP_TOP (param i32) (result)))
 
@@ -346,4 +6082,1270 @@ void handler_POP_TOP(PyObject *value) {
 
 
     // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: TO_BOOL
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_TO_BOOL
+// SKIP unused cache entry/2
+
+// (import "python" "handler_TO_BOOL" (func $handler_TO_BOOL (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_TO_BOOL")))
+PyObject *handler_TO_BOOL(PyObject *value);
+
+PyObject *handler_TO_BOOL(PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    int err = PyObject_IsTrue(value);
+    Py_DECREF(value);
+    assert(err < 0); // (matthew) replace error with assertion
+    res = err ? Py_True : Py_False;
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: BINARY_SUBSCR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_BINARY_SUBSCR
+
+// (import "python" "handler_BINARY_SUBSCR" (func $handler_BINARY_SUBSCR (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BINARY_SUBSCR")))
+PyObject *handler_BINARY_SUBSCR(PyObject *container, PyObject *sub);
+
+PyObject *handler_BINARY_SUBSCR(PyObject *container, PyObject *sub) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    res = PyObject_GetItem(container, sub);
+    Py_DECREF(container);
+    Py_DECREF(sub);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: STORE_SUBSCR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_STORE_SUBSCR
+
+// (import "python" "handler_STORE_SUBSCR" (func $handler_STORE_SUBSCR (param i32 i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_SUBSCR")))
+void handler_STORE_SUBSCR(PyObject *v, PyObject *container, PyObject *sub);
+
+void handler_STORE_SUBSCR(PyObject *v, PyObject *container, PyObject *sub) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    /* container[sub] = v */
+    int err = PyObject_SetItem(container, sub, v);
+    Py_DECREF(v);
+    Py_DECREF(container);
+    Py_DECREF(sub);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: RETURN_VALUE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: False
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: True
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_POP_FRAME" (func $handler_POP_FRAME (param i32) (result)))
+
+__attribute__ ((export_name("handler_POP_FRAME")))
+void handler_POP_FRAME(PyObject *retval);
+
+void handler_POP_FRAME(PyObject *retval) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    #if TIER_ONE
+    assert(frame != &entry_frame);
+    #endif
+    SYNC_SP();
+    _PyFrame_SetStackPointer(frame, stack_pointer);
+    assert(EMPTY());
+    _Py_LeaveRecursiveCallPy(tstate);
+    // GH-99729: We need to unlink the frame *before* clearing it:
+    _PyInterpreterFrame *dying = frame;
+    frame = tstate->current_frame = dying->previous;
+    _PyEval_FrameClearAndPop(tstate, dying);
+    _PyFrame_StackPush(frame, retval);
+    LOAD_SP();
+    LOAD_IP(frame->return_offset);
+    LLTRACE_RESUME_FRAME();
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: RETURN_CONST
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: False
+ *   always_exits: False
+ *   stores_sp: True
+ *   uses_co_consts: True
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+
+// (import "python" "handler_LOAD_CONST" (func $handler_LOAD_CONST (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_LOAD_CONST")))
+PyObject *handler_LOAD_CONST(int oparg);
+
+PyObject *handler_LOAD_CONST(int oparg) {
+    // (matthew) begin emitting space for return
+    PyObject *value;
+    // (matthew) end emitting space for return
+
+    value = GETITEM(FRAME_CO_CONSTS, oparg);
+    Py_INCREF(value);
+
+    // (matthew) begin return
+    return value;
+}
+
+// (import "python" "handler_POP_FRAME" (func $handler_POP_FRAME (param i32) (result)))
+
+__attribute__ ((export_name("handler_POP_FRAME")))
+void handler_POP_FRAME(PyObject *retval);
+
+void handler_POP_FRAME(PyObject *retval) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    #if TIER_ONE
+    assert(frame != &entry_frame);
+    #endif
+    SYNC_SP();
+    _PyFrame_SetStackPointer(frame, stack_pointer);
+    assert(EMPTY());
+    _Py_LeaveRecursiveCallPy(tstate);
+    // GH-99729: We need to unlink the frame *before* clearing it:
+    _PyInterpreterFrame *dying = frame;
+    frame = tstate->current_frame = dying->previous;
+    _PyEval_FrameClearAndPop(tstate, dying);
+    _PyFrame_StackPush(frame, retval);
+    LOAD_SP();
+    LOAD_IP(frame->return_offset);
+    LLTRACE_RESUME_FRAME();
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: SEND
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_SEND
+
+// (import "python" "handler_SEND" (func $handler_SEND (param i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_SEND")))
+struct two_values handler_SEND(int oparg, PyObject *receiver, PyObject *v);
+
+struct two_values handler_SEND(int oparg, PyObject *receiver, PyObject *v) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *retval;
+    // (matthew) end emitting space for return
+
+    assert(frame != &entry_frame);
+    if ((tstate->interp->eval_frame == NULL) &&
+                (Py_TYPE(receiver) == &PyGen_Type || Py_TYPE(receiver) == &PyCoro_Type) &&
+                ((PyGenObject *)receiver)->gi_frame_state < FRAME_EXECUTING)
+    {
+        PyGenObject *gen = (PyGenObject *)receiver;
+        _PyInterpreterFrame *gen_frame = (_PyInterpreterFrame *)gen->gi_iframe;
+        STACK_SHRINK(1);
+        _PyFrame_StackPush(gen_frame, v);
+        gen->gi_frame_state = FRAME_EXECUTING;
+        gen->gi_exc_state.previous_item = tstate->exc_info;
+        tstate->exc_info = &gen->gi_exc_state;
+        assert(next_instr - this_instr + oparg <= UINT16_MAX);
+        frame->return_offset = (uint16_t)(next_instr - this_instr + oparg);
+        DISPATCH_INLINED(gen_frame);
+    }
+    if (Py_IsNone(v) && PyIter_Check(receiver)) {
+        retval = Py_TYPE(receiver)->tp_iternext(receiver);
+    }
+    else {
+        retval = PyObject_CallMethodOneArg(receiver, &_Py_ID(send), v);
+    }
+    if (retval == NULL) {
+        if (_PyErr_ExceptionMatches(tstate, PyExc_StopIteration)
+        ) {
+            _PyEval_MonitorRaise(tstate, frame, this_instr);
+        }
+        if (_PyGen_FetchStopIterationValue(&retval) == 0) {
+            assert(retval != NULL);
+            JUMPBY(oparg);
+        }
+        else {
+            ERROR_NO_POP();
+        }
+    }
+    Py_DECREF(v);
+
+    // (matthew) begin return
+    two_value_return.first = receiver;
+    two_value_return.second = retval;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: UNPACK_SEQUENCE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_UNPACK_SEQUENCE
+
+// (import "python" "handler_UNPACK_SEQUENCE" (func $handler_UNPACK_SEQUENCE (param i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_UNPACK_SEQUENCE")))
+PyObject **handler_UNPACK_SEQUENCE(int oparg, PyObject *seq);
+
+PyObject **handler_UNPACK_SEQUENCE(int oparg, PyObject *seq) {
+    // (matthew) begin emitting space for return
+    PyObject **unused;
+    // (matthew) end emitting space for return
+
+    PyObject **top = stack_pointer + oparg - 1;
+    int res = _PyEval_UnpackIterable(tstate, seq, oparg, -1, top);
+    Py_DECREF(seq);
+    assert(res == 0); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return unused;
+}
+
+/* ------------------------
+ * OPCODE: STORE_ATTR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_STORE_ATTR
+// SKIP unused cache entry/3
+
+// (import "python" "handler_STORE_ATTR" (func $handler_STORE_ATTR (param i32 i32 i32) (result)))
+
+__attribute__ ((export_name("handler_STORE_ATTR")))
+void handler_STORE_ATTR(int oparg, PyObject *v, PyObject *owner);
+
+void handler_STORE_ATTR(int oparg, PyObject *v, PyObject *owner) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
+    int err = PyObject_SetAttr(owner, name, v);
+    Py_DECREF(v);
+    Py_DECREF(owner);
+    assert(err); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: LOAD_GLOBAL
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_LOAD_GLOBAL
+// SKIP unused cache entry/1
+// SKIP unused cache entry/1
+// SKIP unused cache entry/1
+
+// (import "python" "handler_LOAD_GLOBAL" (func $handler_LOAD_GLOBAL (param i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_LOAD_GLOBAL")))
+struct two_values handler_LOAD_GLOBAL(int oparg);
+
+struct two_values handler_LOAD_GLOBAL(int oparg) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *res;
+    PyObject *null;
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg>>1);
+    if (PyDict_CheckExact(GLOBALS())
+                && PyDict_CheckExact(BUILTINS()))
+    {
+        res = _PyDict_LoadGlobal((PyDictObject *)GLOBALS(),
+            (PyDictObject *)BUILTINS(),
+            name);
+        if (res == NULL) {
+            if (!_PyErr_Occurred(tstate)) {
+                /* _PyDict_LoadGlobal() returns NULL without raising
+                 * an exception if the key doesn't exist */
+                _PyEval_FormatExcCheckArg(tstate, PyExc_NameError,
+                    NAME_ERROR_MSG, name);
+            }
+            assert(true); // (matthew) replace error with assertion
+        }
+    }
+    else {
+        /* Slow-path if globals or builtins is not a dict */
+        /* namespace 1: globals */
+        assert(PyMapping_GetOptionalItem(GLOBALS(), name, &res) < 0); // (matthew) replace error with assertion
+        if (res == NULL) {
+            /* namespace 2: builtins */
+            assert(PyMapping_GetOptionalItem(BUILTINS(), name, &res) < 0); // (matthew) replace error with assertion
+            if (res == NULL) {
+                _PyEval_FormatExcCheckArg(
+                    tstate, PyExc_NameError,
+                    NAME_ERROR_MSG, name);
+                assert(true); // (matthew) replace error with assertion
+            }
+        }
+    }
+    null = NULL;
+
+    // (matthew) begin return
+    two_value_return.first = res;
+    two_value_return.second = null;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_SUPER_ATTR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_LOAD_SUPER_ATTR
+
+// (import "python" "handler_LOAD_SUPER_ATTR" (func $handler_LOAD_SUPER_ATTR (param i32 i32 i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_LOAD_SUPER_ATTR")))
+struct two_values handler_LOAD_SUPER_ATTR(int oparg, PyObject *global_super, PyObject *class, PyObject *self);
+
+struct two_values handler_LOAD_SUPER_ATTR(int oparg, PyObject *global_super, PyObject *class, PyObject *self) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *attr;
+    PyObject *null;
+    // (matthew) end emitting space for return
+
+    if (opcode == INSTRUMENTED_LOAD_SUPER_ATTR) {
+        PyObject *arg = oparg & 2 ? class : &_PyInstrumentation_MISSING;
+        int err = _Py_call_instrumentation_2args(
+            tstate, PY_MONITORING_EVENT_CALL,
+            frame, this_instr, global_super, arg);
+        assert(err); // (matthew) replace error with assertion
+    }
+    // we make no attempt to optimize here; specializations should
+    // handle any case whose performance we care about
+    PyObject *stack[] = {class, self};
+    PyObject *super = PyObject_Vectorcall(global_super, stack, oparg & 2, NULL);
+    if (opcode == INSTRUMENTED_LOAD_SUPER_ATTR) {
+        PyObject *arg = oparg & 2 ? class : &_PyInstrumentation_MISSING;
+        if (super == NULL) {
+            _Py_call_instrumentation_exc2(
+                tstate, PY_MONITORING_EVENT_C_RAISE,
+                frame, this_instr, global_super, arg);
+        }
+        else {
+            int err = _Py_call_instrumentation_2args(
+                tstate, PY_MONITORING_EVENT_C_RETURN,
+                frame, this_instr, global_super, arg);
+            if (err < 0) {
+                Py_CLEAR(super);
+            }
+        }
+    }
+    Py_DECREF(global_super);
+    Py_DECREF(class);
+    Py_DECREF(self);
+    assert(super == NULL); // (matthew) replace error with assertion
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg >> 2);
+    attr = PyObject_GetAttr(super, name);
+    Py_DECREF(super);
+    assert(attr == NULL); // (matthew) replace error with assertion
+    null = NULL;
+
+    // (matthew) begin return
+    two_value_return.first = attr;
+    two_value_return.second = null;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: LOAD_ATTR
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: True
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_LOAD_ATTR
+// SKIP unused cache entry/8
+
+// (import "python" "handler_LOAD_ATTR" (func $handler_LOAD_ATTR (param i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_LOAD_ATTR")))
+struct two_values handler_LOAD_ATTR(int oparg, PyObject *owner);
+
+struct two_values handler_LOAD_ATTR(int oparg, PyObject *owner) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *attr;
+    PyObject *self_or_null;
+    // (matthew) end emitting space for return
+
+    PyObject *name = GETITEM(FRAME_CO_NAMES, oparg >> 1);
+    if (oparg & 1) {
+        /* Designed to work in tandem with CALL, pushes two values. */
+        attr = NULL;
+        if (_PyObject_GetMethod(owner, name, &attr)) {
+            /* We can bypass temporary bound method object.
+               meth is unbound method and obj is self.
+               meth | self | arg1 | ... | argN
+             */
+            assert(attr != NULL);  // No errors on this branch
+            self_or_null = owner;  // Transfer ownership
+        }
+        else {
+            /* meth is not an unbound method (but a regular attr, or
+               something was returned by a descriptor protocol).  Set
+               the second element of the stack to NULL, to signal
+               CALL that it's not a method call.
+               meth | NULL | arg1 | ... | argN
+             */
+            Py_DECREF(owner);
+            assert(attr == NULL); // (matthew) replace error with assertion
+            self_or_null = NULL;
+        }
+    }
+    else {
+        /* Classic, pushes one value. */
+        attr = PyObject_GetAttr(owner, name);
+        Py_DECREF(owner);
+        assert(attr == NULL); // (matthew) replace error with assertion
+    }
+
+    // (matthew) begin return
+    two_value_return.first = attr;
+    two_value_return.second = self_or_null;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: COMPARE_OP
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_COMPARE_OP
+
+// (import "python" "handler_COMPARE_OP" (func $handler_COMPARE_OP (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_COMPARE_OP")))
+PyObject *handler_COMPARE_OP(int oparg, PyObject *left, PyObject *right);
+
+PyObject *handler_COMPARE_OP(int oparg, PyObject *left, PyObject *right) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    assert((oparg >> 5) <= Py_GE);
+    res = PyObject_RichCompare(left, right, oparg >> 5);
+    Py_DECREF(left);
+    Py_DECREF(right);
+    assert(res == NULL); // (matthew) replace error with assertion
+    if (oparg & 16) {
+        int res_bool = PyObject_IsTrue(res);
+        Py_DECREF(res);
+        assert(res_bool < 0); // (matthew) replace error with assertion
+        res = res_bool ? Py_True : Py_False;
+    }
+
+    // (matthew) begin return
+    return res;
+}
+
+/* ------------------------
+ * OPCODE: CONTAINS_OP
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_CONTAINS_OP
+
+// (import "python" "handler_CONTAINS_OP" (func $handler_CONTAINS_OP (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_CONTAINS_OP")))
+PyObject *handler_CONTAINS_OP(int oparg, PyObject *left, PyObject *right);
+
+PyObject *handler_CONTAINS_OP(int oparg, PyObject *left, PyObject *right) {
+    // (matthew) begin emitting space for return
+    PyObject *b;
+    // (matthew) end emitting space for return
+
+    int res = PySequence_Contains(right, left);
+    Py_DECREF(left);
+    Py_DECREF(right);
+    assert(res < 0); // (matthew) replace error with assertion
+    b = (res ^ oparg) ? Py_True : Py_False;
+
+    // (matthew) begin return
+    return b;
+}
+
+/* ------------------------
+ * OPCODE: POP_JUMP_IF_TRUE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_POP_JUMP_IF_TRUE" (func $handler_POP_JUMP_IF_TRUE (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_POP_JUMP_IF_TRUE")))
+void handler_POP_JUMP_IF_TRUE(int oparg, PyObject *cond);
+
+void handler_POP_JUMP_IF_TRUE(int oparg, PyObject *cond) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(PyBool_Check(cond));
+    int flag = Py_IsTrue(cond);
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | flag;
+    #endif
+    JUMPBY(oparg * flag);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: POP_JUMP_IF_FALSE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_POP_JUMP_IF_FALSE" (func $handler_POP_JUMP_IF_FALSE (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_POP_JUMP_IF_FALSE")))
+void handler_POP_JUMP_IF_FALSE(int oparg, PyObject *cond);
+
+void handler_POP_JUMP_IF_FALSE(int oparg, PyObject *cond) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(PyBool_Check(cond));
+    int flag = Py_IsFalse(cond);
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | flag;
+    #endif
+    JUMPBY(oparg * flag);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: POP_JUMP_IF_NONE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_IS_NONE" (func $handler_IS_NONE (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_IS_NONE")))
+PyObject *handler_IS_NONE(PyObject *value);
+
+PyObject *handler_IS_NONE(PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *b;
+    // (matthew) end emitting space for return
+
+    if (Py_IsNone(value)) {
+        b = Py_True;
+    }
+    else {
+        b = Py_False;
+        Py_DECREF(value);
+    }
+
+    // (matthew) begin return
+    return b;
+}
+
+// (import "python" "handler_POP_JUMP_IF_TRUE" (func $handler_POP_JUMP_IF_TRUE (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_POP_JUMP_IF_TRUE")))
+void handler_POP_JUMP_IF_TRUE(int oparg, PyObject *cond);
+
+void handler_POP_JUMP_IF_TRUE(int oparg, PyObject *cond) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(PyBool_Check(cond));
+    int flag = Py_IsTrue(cond);
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | flag;
+    #endif
+    JUMPBY(oparg * flag);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: POP_JUMP_IF_NOT_NONE
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: False
+ *   error_with_pop: False
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP unused cache entry/1
+
+// (import "python" "handler_IS_NONE" (func $handler_IS_NONE (param i32) (result i32)))
+
+__attribute__ ((export_name("handler_IS_NONE")))
+PyObject *handler_IS_NONE(PyObject *value);
+
+PyObject *handler_IS_NONE(PyObject *value) {
+    // (matthew) begin emitting space for return
+    PyObject *b;
+    // (matthew) end emitting space for return
+
+    if (Py_IsNone(value)) {
+        b = Py_True;
+    }
+    else {
+        b = Py_False;
+        Py_DECREF(value);
+    }
+
+    // (matthew) begin return
+    return b;
+}
+
+// (import "python" "handler_POP_JUMP_IF_FALSE" (func $handler_POP_JUMP_IF_FALSE (param i32 i32) (result)))
+
+__attribute__ ((export_name("handler_POP_JUMP_IF_FALSE")))
+void handler_POP_JUMP_IF_FALSE(int oparg, PyObject *cond);
+
+void handler_POP_JUMP_IF_FALSE(int oparg, PyObject *cond) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    assert(PyBool_Check(cond));
+    int flag = Py_IsFalse(cond);
+    #if ENABLE_SPECIALIZATION
+    this_instr[1].cache = (this_instr[1].cache << 1) | flag;
+    #endif
+    JUMPBY(oparg * flag);
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: FOR_ITER
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: False
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: True
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_FOR_ITER
+
+// (import "python" "handler_FOR_ITER" (func $handler_FOR_ITER (param i32 i32) (result i32 i32)))
+
+__attribute__ ((export_name("handler_FOR_ITER")))
+struct two_values handler_FOR_ITER(int oparg, PyObject *iter);
+
+struct two_values handler_FOR_ITER(int oparg, PyObject *iter) {
+    // (matthew) begin emitting space for return
+    struct two_values two_value_return;
+    PyObject *next;
+    // (matthew) end emitting space for return
+
+    /* before: [iter]; after: [iter, iter()] *or* [] (and jump over END_FOR.) */
+    next = (*Py_TYPE(iter)->tp_iternext)(iter);
+    if (next == NULL) {
+        if (_PyErr_Occurred(tstate)) {
+            if (!_PyErr_ExceptionMatches(tstate, PyExc_StopIteration)) {
+                ERROR_NO_POP();
+            }
+            _PyEval_MonitorRaise(tstate, frame, this_instr);
+            _PyErr_Clear(tstate);
+        }
+        /* iterator ended normally */
+        assert(next_instr[oparg].op.code == END_FOR ||
+                       next_instr[oparg].op.code == INSTRUMENTED_END_FOR);
+        Py_DECREF(iter);
+        STACK_SHRINK(1);
+        /* Jump forward oparg, then skip following END_FOR and POP_TOP instruction */
+        JUMPBY(oparg + 2);
+        DISPATCH();
+    }
+    // Common case: no jump, leave it to the code generator
+
+    // (matthew) begin return
+    two_value_return.first = iter;
+    two_value_return.second = next;
+    return two_value_return;
+}
+
+/* ------------------------
+ * OPCODE: CALL
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: True
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: True
+ *   ends_with_eval_breaker: True
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_CALL
+// SKIP unused cache entry/2
+
+// (import "python" "handler_CALL" (func $handler_CALL (param i32 i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_CALL")))
+PyObject *handler_CALL(int oparg, PyObject *callable, PyObject *self_or_null, PyObject **args);
+
+PyObject *handler_CALL(int oparg, PyObject *callable, PyObject *self_or_null, PyObject **args) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    // oparg counts all of the args, but *not* self:
+    int total_args = oparg;
+    if (self_or_null != NULL) {
+        args--;
+        total_args++;
+    }
+    else if (Py_TYPE(callable) == &PyMethod_Type) {
+        args--;
+        total_args++;
+        PyObject *self = ((PyMethodObject *)callable)->im_self;
+        args[0] = Py_NewRef(self);
+        PyObject *method = ((PyMethodObject *)callable)->im_func;
+        args[-1] = Py_NewRef(method);
+        Py_DECREF(callable);
+        callable = method;
+    }
+    // Check if the call can be inlined or not
+    if (Py_TYPE(callable) == &PyFunction_Type &&
+                tstate->interp->eval_frame == NULL &&
+                ((PyFunctionObject *)callable)->vectorcall == _PyFunction_Vectorcall)
+    {
+        int code_flags = ((PyCodeObject*)PyFunction_GET_CODE(callable))->co_flags;
+        PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(callable));
+        _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+            tstate, (PyFunctionObject *)callable, locals,
+            args, total_args, NULL
+        );
+        // Manipulate stack directly since we leave using DISPATCH_INLINED().
+        STACK_SHRINK(oparg + 2);
+        // The frame has stolen all the arguments from the stack,
+        // so there is no need to clean them up.
+        if (new_frame == NULL) {
+            ERROR_NO_POP();
+        }
+        frame->return_offset = (uint16_t)(next_instr - this_instr);
+        DISPATCH_INLINED(new_frame);
+    }
+    /* Callable is not a normal Python function */
+    res = PyObject_Vectorcall(
+                                      callable, args,
+                                      total_args | PY_VECTORCALL_ARGUMENTS_OFFSET,
+                                      NULL);
+    if (opcode == INSTRUMENTED_CALL) {
+        PyObject *arg = total_args == 0 ?
+        &_PyInstrumentation_MISSING : args[0];
+        if (res == NULL) {
+            _Py_call_instrumentation_exc2(
+                tstate, PY_MONITORING_EVENT_C_RAISE,
+                frame, this_instr, callable, arg);
+        }
+        else {
+            int err = _Py_call_instrumentation_2args(
+                tstate, PY_MONITORING_EVENT_C_RETURN,
+                frame, this_instr, callable, arg);
+            if (err < 0) {
+                Py_CLEAR(res);
+            }
+        }
+    }
+    assert((res != NULL) ^ (_PyErr_Occurred(tstate) != NULL));
+    Py_DECREF(callable);
+    for (int i = 0; i < total_args; i++) {
+        Py_DECREF(args[i]);
+    }
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
+}
+
+// (import "python" "handler_CHECK_PERIODIC" (func $handler_CHECK_PERIODIC (param) (result)))
+
+__attribute__ ((export_name("handler_CHECK_PERIODIC")))
+void handler_CHECK_PERIODIC(void);
+
+void handler_CHECK_PERIODIC(void) {
+    // (matthew) begin emitting space for return
+    // (matthew) end emitting space for return
+
+    CHECK_EVAL_BREAKER();
+
+    // (matthew) begin return
+}
+
+/* ------------------------
+ * OPCODE: BINARY_OP
+ * INCOMPATIBLE!
+ * PROPERTIES:
+ *   escapes: True
+ *   error_with_pop: True
+ *   error_without_pop: False
+ *   deopts: False
+ *   oparg: True
+ *   jumps: False
+ *   eval_breaker: False
+ *   ends_with_eval_breaker: False
+ *   needs_this: True
+ *   always_exits: False
+ *   stores_sp: False
+ *   uses_co_consts: False
+ *   uses_co_names: False
+ *   uses_locals: False
+ *   has_free: False
+ *   side_exit: False
+ *   pure: False
+ *   tier: None
+ *   oparg_and_1: False
+ *   const_oparg: -1
+ */
+// @@@!!
+// SKIP specializing: _SPECIALIZE_BINARY_OP
+
+// (import "python" "handler_BINARY_OP" (func $handler_BINARY_OP (param i32 i32 i32) (result i32)))
+
+__attribute__ ((export_name("handler_BINARY_OP")))
+PyObject *handler_BINARY_OP(int oparg, PyObject *lhs, PyObject *rhs);
+
+PyObject *handler_BINARY_OP(int oparg, PyObject *lhs, PyObject *rhs) {
+    // (matthew) begin emitting space for return
+    PyObject *res;
+    // (matthew) end emitting space for return
+
+    assert(_PyEval_BinaryOps[oparg]);
+    res = _PyEval_BinaryOps[oparg](lhs, rhs);
+    Py_DECREF(lhs);
+    Py_DECREF(rhs);
+    assert(res == NULL); // (matthew) replace error with assertion
+
+
+    // (matthew) begin return
+    return res;
 }

@@ -1,11 +1,32 @@
 import argparse
 from analyzer import (Analysis, Instruction, analyze_files, Skip, Uop)
-from generators_common import (ROOT, DEFAULT_INPUT, write_header, emit_tokens)
+from generators_common import (ROOT, DEFAULT_INPUT, write_header, emit_tokens, replace_decrefs, replace_error, emit_to)
+from py_metadata_generator import get_specialized
 from cwriter import CWriter
-from typing import TextIO
+from typing import TextIO, Iterator
+from lexer import Token
 from stack import Stack
 
 DEFAULT_OUTPUT = ROOT / "Tools/cases_generator/output/wasm_cases.c"
+
+def replace_error_with_assert(
+        out: CWriter,
+        tkn: Token,
+        tkn_iter: Iterator[Token],
+        uop: Uop,
+        stack: Stack,
+        inst: Instruction | None
+        ) -> None:
+    out.emit_at("assert", tkn)
+    out.emit(next(tkn_iter))
+    emit_to(out, tkn_iter, "COMMA")
+    label = next(tkn_iter).text
+    next(tkn_iter)  # RPAREN
+    next(tkn_iter)  # Semi colon
+    out.emit("); // (matthew) replace error with assertion\n")
+    if label != "error":
+        print("label was not error:", uop.name)
+    #out.emit(label)
 
 def write_uop(
         uop: Uop, out: CWriter, offset: int, inst: Instruction, braces: bool
@@ -28,13 +49,14 @@ def write_uop(
 #                 else:
 #                     type = f"uint{cache.size*16}_t "
 #                     reader = f"read_u{cache.size*16}"
+
 #                 out.emit(
 #                     f"{type}{cache.name} = {reader}(&this_instr[{offset}].cache);\n"
 #                 )
 #                 if inst.family is None:
 #                     out.emit(f"(void){cache.name};\n")
 #             offset += cache.size
-    emit_tokens(out, uop, Stack(), inst)
+    emit_tokens(out, uop, Stack(), inst, { "DECREF_INPUTS": replace_decrefs, "ERROR_IF": replace_error_with_assert})
 #         if uop.properties.stores_sp:
 #             for i, var in enumerate(uop.stack.outputs):
 #                 out.emit(stack.push(var))
@@ -52,16 +74,34 @@ def generate_wasm(
     write_header(__file__, filenames, outfile)
     out = CWriter(outfile, 0, False)
 
+    specialized = get_specialized(analysis)
+
     i = 0
     bytecodes = 0
+    total = 0
 
     # emit struct definition for two values
     out.emit("\n")
     out.emit("struct two_values { PyObject *first; PyObject *second; };\n")
 
     for mnemonic, instruction in analysis.instructions.items():
+        # skip all specialized opcodes
+        if mnemonic in specialized:
+            continue
+        total += 1
+
         # out.emit(f"{mnemonic}: {instruction.properties.tier}\n")
         props = instruction.properties
+
+        out.emit("\n/* ------------------------\n")
+        out.emit(f" * OPCODE: {mnemonic}\n")
+
+        # At current moment, no such instructions exist which fulfill the following properties:
+        #   deopts = True
+        #   side_exit = True
+        #   tier != None
+        #   oparg_and_1 = True
+        #   const_oparg != -1
         if any([props.escapes, props.error_with_pop, props.error_without_pop, props.deopts,
                 #props.oparg,
                 props.jumps, props.eval_breaker, props.ends_with_eval_breaker,
@@ -72,18 +112,22 @@ def generate_wasm(
                 props.has_free, props.side_exit,
                 props.oparg_and_1, props.const_oparg != -1]):
             bytecodes += 1
-            continue
+            out.emit(" * INCOMPATIBLE!\n")
+            #continue
 
-        out.emit("\n/* ------------------------\n")
-        out.emit(f" * OPCODE: {mnemonic}\n")
         out.emit(" * PROPERTIES:\n")
         for (key, value) in props.__dict__.items():
             out.emit(f" *   {key}: {value}\n")
         out.emit(" */\n")
+        out.emit("// @@@!!\n")
 
         for part in instruction.parts:
             # Uop or skip, assume Uop
             if isinstance(part, Skip):
+                out.emit(f"// SKIP unused cache entry/{part.size}\n")
+                continue
+            if "specializing" in part.annotations:
+                out.emit(f"// SKIP specializing: {part.name}\n")
                 continue
 
             inputs = len(part.stack.inputs) + part.properties.oparg
@@ -105,7 +149,7 @@ def generate_wasm(
                     decl += "void "
                 case _:
                     print("Skipping", mnemonic)
-                    out.emit(">>#!@#@! SKIPPING because there are more than 2 outputs\n")
+                    out.emit("// >>#!@#@! SKIPPING because there are more than 2 outputs\n")
                     continue
             # name
             decl += f"handler{part.name}("
@@ -164,7 +208,7 @@ def generate_wasm(
 #         if i > 2:
 #             print("break")
 #             break
-    print("Failed to translate at least", bytecodes, "of", len(analysis.instructions), "bytecodes")
+    print("Failed to translate at least", bytecodes, "of", total, "bytecodes")
 
 
 arg_parser = argparse.ArgumentParser(
