@@ -17,13 +17,13 @@ def replace_error_with_assert(
         stack: Stack,
         inst: Instruction | None
         ) -> None:
-    out.emit_at("assert", tkn)
+    out.emit_at("assert(!", tkn)
     out.emit(next(tkn_iter))
     emit_to(out, tkn_iter, "COMMA")
     label = next(tkn_iter).text
     next(tkn_iter)  # RPAREN
     next(tkn_iter)  # Semi colon
-    out.emit("); // (matthew) replace error with assertion\n")
+    out.emit(")); // (matthew) replace error with assertion\n")
     if label != "error":
         print("label was not error:", uop.name)
     #out.emit(label)
@@ -97,10 +97,10 @@ def generate_wasm(
         out.emit(f" * OPCODE: {mnemonic}\n")
 
         # At current moment, no such instructions exist which fulfill the following properties:
-        #   deopts = True
-        #   side_exit = True
-        #   tier != None
-        #   oparg_and_1 = True
+        #   deopts = True       \
+        #   side_exit = True    | all seem to be eliminated by removing specialized bytecodes
+        #   tier != None        |
+        #   oparg_and_1 = True  /
         #   const_oparg != -1
         if any([props.escapes, props.error_with_pop, props.error_without_pop, props.deopts,
                 #props.oparg,

@@ -27,6 +27,8 @@ class Properties:
     tier: int | None = None
     oparg_and_1: bool = False
     const_oparg: int = -1
+    uses_frame: bool | None = None
+    uses_tstate: bool | None = None
 
     def dump(self, indent: str) -> None:
         print(indent, end="")
@@ -53,6 +55,8 @@ class Properties:
             has_free=any(p.has_free for p in properties),
             side_exit=any(p.side_exit for p in properties),
             pure=all(p.pure for p in properties),
+            uses_frame=any(p.uses_frame for p in properties),
+            uses_tstate=any(p.uses_tstate for p in properties),
         )
 
     @property
@@ -566,6 +570,9 @@ def compute_properties(op: parser.InstDef) -> Properties:
         has_free=has_free,
         pure="pure" in op.annotations,
         tier=tier_variable(op),
+        # matthew
+        uses_frame=variable_used(op, "frame"),
+        uses_tstate=variable_used(op, "tstate"),
     )
 
 
