@@ -28,6 +28,8 @@ struct two_values { PyObject *first; PyObject *second; };
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -69,6 +71,8 @@ void handler_NOP(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -91,7 +95,7 @@ void handler_RESUME(int oparg) {
         assert((code_version & 255) == 0);
         if (code_version != global_version) {
             int err = _Py_Instrument(_PyFrame_GetCode(frame), tstate->interp);
-            assert(err); // (matthew) replace error with assertion
+            assert(!(err)); // (matthew) replace error with assertion
             next_instr = this_instr;
             DISPATCH();
         }
@@ -136,6 +140,8 @@ void handler_RESUME(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -164,7 +170,7 @@ void handler_INSTRUMENTED_RESUME(int oparg) {
         int err = _Py_call_instrumentation(
             tstate, oparg > 0, frame, this_instr);
         stack_pointer = _PyFrame_GetStackPointer(frame);
-        assert(err); // (matthew) replace error with assertion
+        assert(!(err)); // (matthew) replace error with assertion
         if (frame->instr_ptr != this_instr) {
             /* Instrumentation has jumped */
             next_instr = frame->instr_ptr;
@@ -199,6 +205,8 @@ void handler_INSTRUMENTED_RESUME(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -218,7 +226,7 @@ PyObject *handler_LOAD_FAST_CHECK(int oparg) {
             UNBOUNDLOCAL_ERROR_MSG,
             PyTuple_GetItem(_PyFrame_GetCode(frame)->co_localsplusnames, oparg)
         );
-        assert(1); // (matthew) replace error with assertion
+        assert(!(1)); // (matthew) replace error with assertion
     }
     Py_INCREF(value);
 
@@ -249,6 +257,8 @@ PyObject *handler_LOAD_FAST_CHECK(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -294,6 +304,8 @@ PyObject *handler_LOAD_FAST(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -339,6 +351,8 @@ PyObject *handler_LOAD_FAST_AND_CLEAR(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -391,6 +405,8 @@ struct two_values handler_LOAD_FAST_LOAD_FAST(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -435,6 +451,8 @@ PyObject *handler_LOAD_CONST(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -476,6 +494,8 @@ void handler_STORE_FAST(int oparg, PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -523,6 +543,8 @@ PyObject *handler_STORE_FAST_LOAD_FAST(int oparg, PyObject *value1) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -566,6 +588,8 @@ void handler_STORE_FAST_STORE_FAST(int oparg, PyObject *value2, PyObject *value1
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -607,6 +631,8 @@ void handler_POP_TOP(PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -650,6 +676,8 @@ PyObject *handler_PUSH_NULL(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -699,6 +727,8 @@ PyObject *handler_INSTRUMENTED_END_FOR(PyObject *receiver, PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -741,6 +771,8 @@ PyObject *handler_END_SEND(PyObject *receiver, PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -788,6 +820,8 @@ PyObject *handler_INSTRUMENTED_END_SEND(PyObject *receiver, PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -803,7 +837,7 @@ PyObject *handler_UNARY_NEGATIVE(PyObject *value) {
 
     res = PyNumber_Negative(value);
     Py_DECREF(value);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -833,6 +867,8 @@ PyObject *handler_UNARY_NEGATIVE(PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -877,6 +913,8 @@ PyObject *handler_UNARY_NOT(PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -892,7 +930,7 @@ PyObject *handler_UNARY_INVERT(PyObject *value) {
 
     res = PyNumber_Invert(value);
     Py_DECREF(value);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -923,6 +961,8 @@ PyObject *handler_UNARY_INVERT(PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -947,7 +987,7 @@ PyObject *handler_BINARY_SLICE(PyObject *container, PyObject *start, PyObject *s
         Py_DECREF(slice);
     }
     Py_DECREF(container);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -978,6 +1018,8 @@ PyObject *handler_BINARY_SLICE(PyObject *container, PyObject *start, PyObject *s
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -1001,7 +1043,7 @@ void handler_STORE_SLICE(PyObject *v, PyObject *container, PyObject *start, PyOb
     }
     Py_DECREF(v);
     Py_DECREF(container);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1031,6 +1073,8 @@ void handler_STORE_SLICE(PyObject *v, PyObject *container, PyObject *start, PyOb
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -1044,7 +1088,7 @@ struct two_values handler_LIST_APPEND(int oparg, PyObject *list, PyObject **unus
     struct two_values two_value_return;
     // (matthew) end emitting space for return
 
-    assert(_PyList_AppendTakeRef((PyListObject *)list, v) < 0); // (matthew) replace error with assertion
+    assert(!(_PyList_AppendTakeRef((PyListObject *)list, v) < 0)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1077,6 +1121,8 @@ struct two_values handler_LIST_APPEND(int oparg, PyObject *list, PyObject **unus
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -1092,7 +1138,7 @@ struct two_values handler_SET_ADD(int oparg, PyObject *set, PyObject **unused, P
 
     int err = PySet_Add(set, v);
     Py_DECREF(v);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1125,6 +1171,8 @@ struct two_values handler_SET_ADD(int oparg, PyObject *set, PyObject **unused, P
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -1141,7 +1189,7 @@ void handler_DELETE_SUBSCR(PyObject *container, PyObject *sub) {
     int err = PyObject_DelItem(container, sub);
     Py_DECREF(container);
     Py_DECREF(sub);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1171,6 +1219,8 @@ void handler_DELETE_SUBSCR(PyObject *container, PyObject *sub) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1187,7 +1237,7 @@ PyObject *handler_CALL_INTRINSIC_1(int oparg, PyObject *value) {
     assert(oparg <= MAX_INTRINSIC_1);
     res = _PyIntrinsics_UnaryFunctions[oparg].func(tstate, value);
     Py_DECREF(value);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1218,6 +1268,8 @@ PyObject *handler_CALL_INTRINSIC_1(int oparg, PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1235,7 +1287,7 @@ PyObject *handler_CALL_INTRINSIC_2(int oparg, PyObject *value2, PyObject *value1
     res = _PyIntrinsics_BinaryFunctions[oparg].func(tstate, value2, value1);
     Py_DECREF(value2);
     Py_DECREF(value1);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1266,6 +1318,8 @@ PyObject *handler_CALL_INTRINSIC_2(int oparg, PyObject *value2, PyObject *value1
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1298,7 +1352,7 @@ void handler_RAISE_VARARGS(int oparg, PyObject **args) {
                                  "bad RAISE_VARARGS oparg");
         break;
     }
-    assert(true); // (matthew) replace error with assertion
+    assert(!(true)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1328,6 +1382,8 @@ void handler_RAISE_VARARGS(int oparg, PyObject **args) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1375,6 +1431,8 @@ void handler_INTERPRETER_EXIT(PyObject *retval) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1431,6 +1489,8 @@ void handler_INSTRUMENTED_RETURN_VALUE(PyObject *retval) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1488,6 +1548,8 @@ void handler_INSTRUMENTED_RETURN_CONST(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1512,11 +1574,11 @@ PyObject *handler_GET_AITER(PyObject *obj) {
                               "__aiter__ method, got %.100s",
                               type->tp_name);
         Py_DECREF(obj);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     iter = (*getter)(obj);
     Py_DECREF(obj);
-    assert(iter == NULL); // (matthew) replace error with assertion
+    assert(!(iter == NULL)); // (matthew) replace error with assertion
     if (Py_TYPE(iter)->tp_as_async == NULL ||
                 Py_TYPE(iter)->tp_as_async->am_anext == NULL) {
         _PyErr_Format(tstate, PyExc_TypeError,
@@ -1524,7 +1586,7 @@ PyObject *handler_GET_AITER(PyObject *obj) {
                               "that does not implement __anext__: %.100s",
                               Py_TYPE(iter)->tp_name);
         Py_DECREF(iter);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
 
     // (matthew) begin return
@@ -1555,6 +1617,8 @@ PyObject *handler_GET_AITER(PyObject *obj) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1638,6 +1702,8 @@ struct two_values handler_GET_ANEXT(PyObject *aiter) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1669,7 +1735,7 @@ PyObject *handler_GET_AWAITABLE(int oparg, PyObject *iterable) {
             /* The code below jumps to `error` if `iter` is NULL. */
         }
     }
-    assert(iter == NULL); // (matthew) replace error with assertion
+    assert(!(iter == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -1700,6 +1766,8 @@ PyObject *handler_GET_AWAITABLE(int oparg, PyObject *iterable) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1764,6 +1832,8 @@ PyObject *handler_INSTRUMENTED_YIELD_VALUE(int oparg, PyObject *retval) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1839,6 +1909,8 @@ PyObject *handler_YIELD_VALUE(int oparg, PyObject *retval) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1881,6 +1953,8 @@ void handler_POP_EXCEPT(PyObject *exc_value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1940,6 +2014,8 @@ PyObject **handler_RERAISE(int oparg, PyObject **values, PyObject *exc) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -1991,6 +2067,8 @@ void handler_END_ASYNC_FOR(PyObject *awaitable, PyObject *exc) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2051,6 +2129,8 @@ struct two_values handler_CLEANUP_THROW(PyObject *sub_iter, PyObject *last_sent_
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -2094,6 +2174,8 @@ PyObject *handler_LOAD_ASSERTION_ERROR(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2107,11 +2189,11 @@ PyObject *handler_LOAD_BUILD_CLASS(void) {
     PyObject *bc;
     // (matthew) end emitting space for return
 
-    assert(PyMapping_GetOptionalItem(BUILTINS(), &_Py_ID(__build_class__), &bc) < 0); // (matthew) replace error with assertion
+    assert(!(PyMapping_GetOptionalItem(BUILTINS(), &_Py_ID(__build_class__), &bc) < 0)); // (matthew) replace error with assertion
     if (bc == NULL) {
         _PyErr_SetString(tstate, PyExc_NameError,
                                  "__build_class__ not found");
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
 
     // (matthew) begin return
@@ -2142,6 +2224,8 @@ PyObject *handler_LOAD_BUILD_CLASS(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2161,14 +2245,14 @@ void handler_STORE_NAME(int oparg, PyObject *v) {
         _PyErr_Format(tstate, PyExc_SystemError,
                               "no locals found when storing %R", name);
         Py_DECREF(v);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     if (PyDict_CheckExact(ns))
     err = PyDict_SetItem(ns, name, v);
     else
     err = PyObject_SetItem(ns, name, v);
     Py_DECREF(v);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -2198,6 +2282,8 @@ void handler_STORE_NAME(int oparg, PyObject *v) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2254,6 +2340,8 @@ void handler_DELETE_NAME(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2285,6 +2373,8 @@ void handler_DELETE_NAME(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -2300,7 +2390,7 @@ void handler_DELETE_ATTR(int oparg, PyObject *owner) {
     PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
     int err = PyObject_DelAttr(owner, name);
     Py_DECREF(owner);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -2330,6 +2420,8 @@ void handler_DELETE_ATTR(int oparg, PyObject *owner) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -2345,7 +2437,7 @@ void handler_STORE_GLOBAL(int oparg, PyObject *v) {
     PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
     int err = PyDict_SetItem(GLOBALS(), name, v);
     Py_DECREF(v);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -2375,6 +2467,8 @@ void handler_STORE_GLOBAL(int oparg, PyObject *v) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2426,6 +2520,8 @@ void handler_DELETE_GLOBAL(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2443,7 +2539,7 @@ PyObject *handler_LOAD_LOCALS(void) {
     if (locals == NULL) {
         _PyErr_SetString(tstate, PyExc_SystemError,
                                  "no locals found");
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     Py_INCREF(locals);
 
@@ -2475,6 +2571,8 @@ PyObject *handler_LOAD_LOCALS(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2512,15 +2610,15 @@ PyObject *handler_LOAD_FROM_DICT_OR_GLOBALS(int oparg, PyObject *mod_or_class_di
         else {
             /* Slow-path if globals or builtins is not a dict */
             /* namespace 1: globals */
-            assert(PyMapping_GetOptionalItem(GLOBALS(), name, &v) < 0); // (matthew) replace error with assertion
+            assert(!(PyMapping_GetOptionalItem(GLOBALS(), name, &v) < 0)); // (matthew) replace error with assertion
             if (v == NULL) {
                 /* namespace 2: builtins */
-                assert(PyMapping_GetOptionalItem(BUILTINS(), name, &v) < 0); // (matthew) replace error with assertion
+                assert(!(PyMapping_GetOptionalItem(BUILTINS(), name, &v) < 0)); // (matthew) replace error with assertion
                 if (v == NULL) {
                     _PyEval_FormatExcCheckArg(
                         tstate, PyExc_NameError,
                         NAME_ERROR_MSG, name);
-                    assert(true); // (matthew) replace error with assertion
+                    assert(!(true)); // (matthew) replace error with assertion
                 }
             }
         }
@@ -2556,6 +2654,8 @@ PyObject *handler_LOAD_FROM_DICT_OR_GLOBALS(int oparg, PyObject *mod_or_class_di
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2573,7 +2673,7 @@ PyObject *handler_LOAD_NAME(int oparg) {
     if (mod_or_class_dict == NULL) {
         _PyErr_SetString(tstate, PyExc_SystemError,
                                  "no locals found");
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
     if (PyMapping_GetOptionalItem(mod_or_class_dict, name, &v) < 0) {
@@ -2624,6 +2724,8 @@ PyObject *handler_LOAD_NAME(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2642,7 +2744,7 @@ void handler_DELETE_FAST(int oparg) {
             UNBOUNDLOCAL_ERROR_MSG,
             PyTuple_GetItem(_PyFrame_GetCode(frame)->co_localsplusnames, oparg)
         );
-        assert(1); // (matthew) replace error with assertion
+        assert(!(1)); // (matthew) replace error with assertion
     }
     SETLOCAL(oparg, NULL);
 
@@ -2673,6 +2775,8 @@ void handler_DELETE_FAST(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -2721,6 +2825,8 @@ void handler_MAKE_CELL(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2770,6 +2876,8 @@ void handler_DELETE_DEREF(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2828,6 +2936,8 @@ PyObject *handler_LOAD_FROM_DICT_OR_DEREF(int oparg, PyObject *class_dict) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -2845,7 +2955,7 @@ PyObject *handler_LOAD_DEREF(int oparg) {
     value = PyCell_GetRef(cell);
     if (value == NULL) {
         _PyEval_FormatExcUnbound(tstate, _PyFrame_GetCode(frame), oparg);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
 
     // (matthew) begin return
@@ -2876,6 +2986,8 @@ PyObject *handler_LOAD_DEREF(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -2918,6 +3030,8 @@ void handler_STORE_DEREF(int oparg, PyObject *v) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -2968,6 +3082,8 @@ void handler_COPY_FREE_VARS(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -2985,7 +3101,7 @@ PyObject *handler_BUILD_STRING(int oparg, PyObject **pieces) {
     for (int _i = oparg; --_i >= 0;) {
         Py_DECREF(pieces[_i]);
     }
-    assert(str == NULL); // (matthew) replace error with assertion
+    assert(!(str == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3016,6 +3132,8 @@ PyObject *handler_BUILD_STRING(int oparg, PyObject **pieces) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3030,7 +3148,7 @@ PyObject *handler_BUILD_TUPLE(int oparg, PyObject **values) {
     // (matthew) end emitting space for return
 
     tup = _PyTuple_FromArraySteal(values, oparg);
-    assert(tup == NULL); // (matthew) replace error with assertion
+    assert(!(tup == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3061,6 +3179,8 @@ PyObject *handler_BUILD_TUPLE(int oparg, PyObject **values) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3075,7 +3195,7 @@ PyObject *handler_BUILD_LIST(int oparg, PyObject **values) {
     // (matthew) end emitting space for return
 
     list = _PyList_FromArraySteal(values, oparg);
-    assert(list == NULL); // (matthew) replace error with assertion
+    assert(!(list == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3106,6 +3226,8 @@ PyObject *handler_BUILD_LIST(int oparg, PyObject **values) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3130,7 +3252,7 @@ struct two_values handler_LIST_EXTEND(int oparg, PyObject *list, PyObject **unus
                                   Py_TYPE(iterable)->tp_name);
         }
         Py_DECREF(iterable);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     assert(Py_IsNone(none_val));
     Py_DECREF(iterable);
@@ -3166,6 +3288,8 @@ struct two_values handler_LIST_EXTEND(int oparg, PyObject *list, PyObject **unus
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3181,7 +3305,7 @@ struct two_values handler_SET_UPDATE(int oparg, PyObject *set, PyObject **unused
 
     int err = _PySet_Update(set, iterable);
     Py_DECREF(iterable);
-    assert(err < 0); // (matthew) replace error with assertion
+    assert(!(err < 0)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3214,6 +3338,8 @@ struct two_values handler_SET_UPDATE(int oparg, PyObject *set, PyObject **unused
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3239,7 +3365,7 @@ PyObject *handler_BUILD_SET(int oparg, PyObject **values) {
     }
     if (err != 0) {
         Py_DECREF(set);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
 
     // (matthew) begin return
@@ -3270,6 +3396,8 @@ PyObject *handler_BUILD_SET(int oparg, PyObject **values) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3290,7 +3418,7 @@ PyObject *handler_BUILD_MAP(int oparg, PyObject **values) {
     for (int _i = oparg*2; --_i >= 0;) {
         Py_DECREF(values[_i]);
     }
-    assert(map == NULL); // (matthew) replace error with assertion
+    assert(!(map == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3321,6 +3449,8 @@ PyObject *handler_BUILD_MAP(int oparg, PyObject **values) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3338,17 +3468,17 @@ void handler_SETUP_ANNOTATIONS(void) {
     if (LOCALS() == NULL) {
         _PyErr_Format(tstate, PyExc_SystemError,
                               "no locals found when setting up annotations");
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     /* check if __annotations__ in locals()... */
-    assert(PyMapping_GetOptionalItem(LOCALS(), &_Py_ID(__annotations__), &ann_dict) < 0); // (matthew) replace error with assertion
+    assert(!(PyMapping_GetOptionalItem(LOCALS(), &_Py_ID(__annotations__), &ann_dict) < 0)); // (matthew) replace error with assertion
     if (ann_dict == NULL) {
         ann_dict = PyDict_New();
-        assert(ann_dict == NULL); // (matthew) replace error with assertion
+        assert(!(ann_dict == NULL)); // (matthew) replace error with assertion
         err = PyObject_SetItem(LOCALS(), &_Py_ID(__annotations__),
                                        ann_dict);
         Py_DECREF(ann_dict);
-        assert(err); // (matthew) replace error with assertion
+        assert(!(err)); // (matthew) replace error with assertion
     }
     else {
         Py_DECREF(ann_dict);
@@ -3381,6 +3511,8 @@ void handler_SETUP_ANNOTATIONS(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3403,7 +3535,7 @@ PyObject *handler_BUILD_CONST_KEY_MAP(int oparg, PyObject **values, PyObject *ke
         Py_DECREF(values[_i]);
     }
     Py_DECREF(keys);
-    assert(map == NULL); // (matthew) replace error with assertion
+    assert(!(map == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3434,6 +3566,8 @@ PyObject *handler_BUILD_CONST_KEY_MAP(int oparg, PyObject **values, PyObject *ke
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3454,7 +3588,7 @@ struct two_values handler_DICT_UPDATE(int oparg, PyObject *dict, PyObject **unus
                                   Py_TYPE(update)->tp_name);
         }
         Py_DECREF(update);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     Py_DECREF(update);
 
@@ -3489,6 +3623,8 @@ struct two_values handler_DICT_UPDATE(int oparg, PyObject *dict, PyObject **unus
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3520,6 +3656,8 @@ struct two_values handler_DICT_UPDATE(int oparg, PyObject *dict, PyObject **unus
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3536,7 +3674,7 @@ struct two_values handler_MAP_ADD(int oparg, PyObject *dict, PyObject **unused, 
     assert(PyDict_CheckExact(dict));
     /* dict[key] = value */
     // Do not DECREF INPUTS because the function steals the references
-    assert(_PyDict_SetItem_Take2((PyDictObject *)dict, key, value) != 0); // (matthew) replace error with assertion
+    assert(!(_PyDict_SetItem_Take2((PyDictObject *)dict, key, value) != 0)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3569,6 +3707,8 @@ struct two_values handler_MAP_ADD(int oparg, PyObject *dict, PyObject **unused, 
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -3618,6 +3758,8 @@ struct two_values handler_INSTRUMENTED_LOAD_SUPER_ATTR(int oparg, PyObject *unus
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3664,6 +3806,8 @@ PyObject *handler_IS_OP(int oparg, PyObject *left, PyObject *right) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3682,7 +3826,7 @@ struct two_values handler_CHECK_EG_MATCH(PyObject *exc_value, PyObject *match_ty
     if (_PyEval_CheckExceptStarTypeValid(tstate, match_type) < 0) {
         Py_DECREF(exc_value);
         Py_DECREF(match_type);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     match = NULL;
     rest = NULL;
@@ -3690,9 +3834,9 @@ struct two_values handler_CHECK_EG_MATCH(PyObject *exc_value, PyObject *match_ty
         &match, &rest);
     Py_DECREF(exc_value);
     Py_DECREF(match_type);
-    assert(res < 0); // (matthew) replace error with assertion
+    assert(!(res < 0)); // (matthew) replace error with assertion
     assert((match == NULL) == (rest == NULL));
-    assert(match == NULL); // (matthew) replace error with assertion
+    assert(!(match == NULL)); // (matthew) replace error with assertion
     if (!Py_IsNone(match)) {
         PyErr_SetHandledException(match);
     }
@@ -3727,6 +3871,8 @@ struct two_values handler_CHECK_EG_MATCH(PyObject *exc_value, PyObject *match_ty
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3744,7 +3890,7 @@ struct two_values handler_CHECK_EXC_MATCH(PyObject *left, PyObject *right) {
     assert(PyExceptionInstance_Check(left));
     if (_PyEval_CheckExceptTypeValid(tstate, right) < 0) {
         Py_DECREF(right);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
     int res = PyErr_GivenExceptionMatches(left, right);
     Py_DECREF(right);
@@ -3780,6 +3926,8 @@ struct two_values handler_CHECK_EXC_MATCH(PyObject *left, PyObject *right) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3797,7 +3945,7 @@ PyObject *handler_IMPORT_NAME(int oparg, PyObject *level, PyObject *fromlist) {
     res = import_name(tstate, frame, name, fromlist, level);
     Py_DECREF(level);
     Py_DECREF(fromlist);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3828,6 +3976,8 @@ PyObject *handler_IMPORT_NAME(int oparg, PyObject *level, PyObject *fromlist) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -3844,7 +3994,7 @@ struct two_values handler_IMPORT_FROM(int oparg, PyObject *from) {
 
     PyObject *name = GETITEM(FRAME_CO_NAMES, oparg);
     res = import_from(tstate, from, name);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -3877,6 +4027,8 @@ struct two_values handler_IMPORT_FROM(int oparg, PyObject *from) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -3918,6 +4070,8 @@ void handler_JUMP_FORWARD(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -3946,7 +4100,7 @@ void handler_JUMP_BACKWARD(int oparg) {
         }
         _PyExecutorObject *executor;
         int optimized = _PyOptimizer_Optimize(frame, start, stack_pointer, &executor);
-        assert(optimized < 0); // (matthew) replace error with assertion
+        assert(!(optimized < 0)); // (matthew) replace error with assertion
         if (optimized) {
             assert(tstate->previous_executor == NULL);
             tstate->previous_executor = Py_None;
@@ -3989,6 +4143,8 @@ void handler_JUMP_BACKWARD(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4054,6 +4210,8 @@ void handler_ENTER_EXECUTOR(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -4100,6 +4258,8 @@ void handler_JUMP_BACKWARD_NO_INTERRUPT(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -4116,9 +4276,9 @@ struct two_values handler_GET_LEN(PyObject *obj) {
 
     // PUSH(len(TOS))
     Py_ssize_t len_i = PyObject_Length(obj);
-    assert(len_i < 0); // (matthew) replace error with assertion
+    assert(!(len_i < 0)); // (matthew) replace error with assertion
     len_o = PyLong_FromSsize_t(len_i);
-    assert(len_o == NULL); // (matthew) replace error with assertion
+    assert(!(len_o == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -4151,6 +4311,8 @@ struct two_values handler_GET_LEN(PyObject *obj) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4175,7 +4337,7 @@ PyObject *handler_MATCH_CLASS(int oparg, PyObject *subject, PyObject *type, PyOb
         assert(PyTuple_CheckExact(attrs));  // Success!
     }
     else {
-        assert(_PyErr_Occurred(tstate)); // (matthew) replace error with assertion
+        assert(!(_PyErr_Occurred(tstate))); // (matthew) replace error with assertion
         // Error!
         attrs = Py_None;  // Failure!
     }
@@ -4208,6 +4370,8 @@ PyObject *handler_MATCH_CLASS(int oparg, PyObject *subject, PyObject *type, PyOb
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -4255,6 +4419,8 @@ struct two_values handler_MATCH_MAPPING(PyObject *subject) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -4302,6 +4468,8 @@ struct two_values handler_MATCH_SEQUENCE(PyObject *subject) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4333,6 +4501,8 @@ struct two_values handler_MATCH_SEQUENCE(PyObject *subject) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -4349,7 +4519,7 @@ PyObject *handler_GET_ITER(PyObject *iterable) {
     /* before: [obj]; after [getiter(obj)] */
     iter = PyObject_GetIter(iterable);
     Py_DECREF(iterable);
-    assert(iter == NULL); // (matthew) replace error with assertion
+    assert(!(iter == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -4380,6 +4550,8 @@ PyObject *handler_GET_ITER(PyObject *iterable) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4446,6 +4618,8 @@ PyObject *handler_GET_YIELD_FROM_ITER(PyObject *iterable) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -4511,6 +4685,8 @@ void handler_INSTRUMENTED_FOR_ITER(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4553,7 +4729,7 @@ struct two_values handler_BEFORE_ASYNC_WITH(PyObject *mgr) {
     Py_DECREF(enter);
     if (res == NULL) {
         Py_DECREF(exit);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
 
     // (matthew) begin return
@@ -4586,6 +4762,8 @@ struct two_values handler_BEFORE_ASYNC_WITH(PyObject *mgr) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4631,7 +4809,7 @@ struct two_values handler_BEFORE_WITH(PyObject *mgr) {
     Py_DECREF(enter);
     if (res == NULL) {
         Py_DECREF(exit);
-        assert(true); // (matthew) replace error with assertion
+        assert(!(true)); // (matthew) replace error with assertion
     }
 
     // (matthew) begin return
@@ -4664,6 +4842,8 @@ struct two_values handler_BEFORE_WITH(PyObject *mgr) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -4695,6 +4875,8 @@ struct two_values handler_BEFORE_WITH(PyObject *mgr) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4749,6 +4931,8 @@ struct two_values handler_PUSH_EXC_INFO(PyObject *new_exc) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP unused cache entry/3
@@ -4770,7 +4954,7 @@ void handler_INSTRUMENTED_CALL(int oparg) {
     int err = _Py_call_instrumentation_2args(
         tstate, PY_MONITORING_EVENT_CALL,
         frame, this_instr, function, arg);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
     PAUSE_ADAPTIVE_COUNTER(this_instr[1].counter);
     GO_TO_INSTRUCTION(CALL);
 
@@ -4801,6 +4985,8 @@ void handler_INSTRUMENTED_CALL(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -4848,6 +5034,8 @@ void handler_EXIT_INIT_CHECK(PyObject *should_be_none) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4868,7 +5056,7 @@ void handler_INSTRUMENTED_CALL_KW(int oparg) {
     int err = _Py_call_instrumentation_2args(
         tstate, PY_MONITORING_EVENT_CALL,
         frame, this_instr, function, arg);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
     GO_TO_INSTRUCTION(CALL_KW);
 
     // (matthew) begin return
@@ -4898,6 +5086,8 @@ void handler_INSTRUMENTED_CALL_KW(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -4979,7 +5169,7 @@ PyObject *handler_CALL_KW(int oparg, PyObject *callable, PyObject *self_or_null,
     for (int i = 0; i < total_args; i++) {
         Py_DECREF(args[i]);
     }
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
     CHECK_EVAL_BREAKER();
 
     // (matthew) begin return
@@ -5010,6 +5200,8 @@ PyObject *handler_CALL_KW(int oparg, PyObject *callable, PyObject *self_or_null,
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5051,6 +5243,8 @@ void handler_INSTRUMENTED_CALL_FUNCTION_EX(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -5129,7 +5323,7 @@ PyObject *handler_CALL_FUNCTION_EX(int oparg, PyObject *func, PyObject *unused, 
     Py_DECREF(callargs);
     Py_XDECREF(kwargs);
     assert(PEEK(2 + (oparg & 1)) == NULL);
-    assert(result == NULL); // (matthew) replace error with assertion
+    assert(!(result == NULL)); // (matthew) replace error with assertion
     CHECK_EVAL_BREAKER();
 
     // (matthew) begin return
@@ -5160,6 +5354,8 @@ PyObject *handler_CALL_FUNCTION_EX(int oparg, PyObject *func, PyObject *unused, 
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5211,6 +5407,8 @@ PyObject *handler_MAKE_FUNCTION(PyObject *codeobj) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5276,6 +5474,8 @@ PyObject *handler_SET_FUNCTION_ATTRIBUTE(int oparg, PyObject *attr, PyObject *fu
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -5340,6 +5540,8 @@ PyObject *handler_RETURN_GENERATOR(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5357,7 +5559,7 @@ PyObject *handler_BUILD_SLICE(int oparg, PyObject *start, PyObject *stop, PyObje
     Py_DECREF(start);
     Py_DECREF(stop);
     Py_XDECREF(step);
-    assert(slice == NULL); // (matthew) replace error with assertion
+    assert(!(slice == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -5388,6 +5590,8 @@ PyObject *handler_BUILD_SLICE(int oparg, PyObject *start, PyObject *stop, PyObje
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5406,7 +5610,7 @@ PyObject *handler_CONVERT_VALUE(int oparg, PyObject *value) {
     conv_fn = _PyEval_ConversionFuncs[oparg];
     result = conv_fn(value);
     Py_DECREF(value);
-    assert(result == NULL); // (matthew) replace error with assertion
+    assert(!(result == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -5437,6 +5641,8 @@ PyObject *handler_CONVERT_VALUE(int oparg, PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5455,7 +5661,7 @@ PyObject *handler_FORMAT_SIMPLE(PyObject *value) {
     if (!PyUnicode_CheckExact(value)) {
         res = PyObject_Format(value, NULL);
         Py_DECREF(value);
-        assert(res == NULL); // (matthew) replace error with assertion
+        assert(!(res == NULL)); // (matthew) replace error with assertion
     }
     else {
         res = value;
@@ -5489,6 +5695,8 @@ PyObject *handler_FORMAT_SIMPLE(PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5505,7 +5713,7 @@ PyObject *handler_FORMAT_WITH_SPEC(PyObject *value, PyObject *fmt_spec) {
     res = PyObject_Format(value, fmt_spec);
     Py_DECREF(value);
     Py_DECREF(fmt_spec);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -5535,6 +5743,8 @@ PyObject *handler_FORMAT_WITH_SPEC(PyObject *value, PyObject *fmt_spec) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5565,6 +5775,8 @@ PyObject *handler_FORMAT_WITH_SPEC(PyObject *value, PyObject *fmt_spec) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5596,6 +5808,8 @@ PyObject *handler_FORMAT_WITH_SPEC(PyObject *value, PyObject *fmt_spec) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -5610,7 +5824,7 @@ void handler_INSTRUMENTED_INSTRUCTION(void) {
 
     int next_opcode = _Py_call_instrumentation_instruction(
         tstate, frame, this_instr);
-    assert(next_opcode < 0); // (matthew) replace error with assertion
+    assert(!(next_opcode < 0)); // (matthew) replace error with assertion
     next_instr = this_instr;
     if (_PyOpcode_Caches[next_opcode]) {
         PAUSE_ADAPTIVE_COUNTER(next_instr[1].counter);
@@ -5646,6 +5860,8 @@ void handler_INSTRUMENTED_INSTRUCTION(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5687,6 +5903,8 @@ void handler_INSTRUMENTED_JUMP_FORWARD(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -5730,6 +5948,8 @@ void handler_INSTRUMENTED_JUMP_BACKWARD(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -5779,6 +5999,8 @@ void handler_INSTRUMENTED_POP_JUMP_IF_TRUE(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -5828,6 +6050,8 @@ void handler_INSTRUMENTED_POP_JUMP_IF_FALSE(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -5883,6 +6107,8 @@ void handler_INSTRUMENTED_POP_JUMP_IF_NONE(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -5938,6 +6164,8 @@ void handler_INSTRUMENTED_POP_JUMP_IF_NOT_NONE(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -5983,6 +6211,8 @@ void handler_EXTENDED_ARG(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -6025,6 +6255,8 @@ void handler_CACHE(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -6066,6 +6298,8 @@ void handler_RESERVED(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 
@@ -6108,6 +6342,8 @@ void handler_POP_TOP(PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_TO_BOOL
@@ -6125,7 +6361,7 @@ PyObject *handler_TO_BOOL(PyObject *value) {
 
     int err = PyObject_IsTrue(value);
     Py_DECREF(value);
-    assert(err < 0); // (matthew) replace error with assertion
+    assert(!(err < 0)); // (matthew) replace error with assertion
     res = err ? Py_True : Py_False;
 
     // (matthew) begin return
@@ -6156,6 +6392,8 @@ PyObject *handler_TO_BOOL(PyObject *value) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_BINARY_SUBSCR
@@ -6173,7 +6411,7 @@ PyObject *handler_BINARY_SUBSCR(PyObject *container, PyObject *sub) {
     res = PyObject_GetItem(container, sub);
     Py_DECREF(container);
     Py_DECREF(sub);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -6204,6 +6442,8 @@ PyObject *handler_BINARY_SUBSCR(PyObject *container, PyObject *sub) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_STORE_SUBSCR
@@ -6222,7 +6462,7 @@ void handler_STORE_SUBSCR(PyObject *v, PyObject *container, PyObject *sub) {
     Py_DECREF(v);
     Py_DECREF(container);
     Py_DECREF(sub);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -6252,6 +6492,8 @@ void handler_STORE_SUBSCR(PyObject *v, PyObject *container, PyObject *sub) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -6307,6 +6549,8 @@ void handler_POP_FRAME(PyObject *retval) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 
@@ -6379,6 +6623,8 @@ void handler_POP_FRAME(PyObject *retval) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_SEND
@@ -6461,6 +6707,8 @@ struct two_values handler_SEND(int oparg, PyObject *receiver, PyObject *v) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_UNPACK_SEQUENCE
@@ -6478,7 +6726,7 @@ PyObject **handler_UNPACK_SEQUENCE(int oparg, PyObject *seq) {
     PyObject **top = stack_pointer + oparg - 1;
     int res = _PyEval_UnpackIterable(tstate, seq, oparg, -1, top);
     Py_DECREF(seq);
-    assert(res == 0); // (matthew) replace error with assertion
+    assert(!(res == 0)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -6509,6 +6757,8 @@ PyObject **handler_UNPACK_SEQUENCE(int oparg, PyObject *seq) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_STORE_ATTR
@@ -6527,7 +6777,7 @@ void handler_STORE_ATTR(int oparg, PyObject *v, PyObject *owner) {
     int err = PyObject_SetAttr(owner, name, v);
     Py_DECREF(v);
     Py_DECREF(owner);
-    assert(err); // (matthew) replace error with assertion
+    assert(!(err)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -6557,6 +6807,8 @@ void handler_STORE_ATTR(int oparg, PyObject *v, PyObject *owner) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_LOAD_GLOBAL
@@ -6590,21 +6842,21 @@ struct two_values handler_LOAD_GLOBAL(int oparg) {
                 _PyEval_FormatExcCheckArg(tstate, PyExc_NameError,
                     NAME_ERROR_MSG, name);
             }
-            assert(true); // (matthew) replace error with assertion
+            assert(!(true)); // (matthew) replace error with assertion
         }
     }
     else {
         /* Slow-path if globals or builtins is not a dict */
         /* namespace 1: globals */
-        assert(PyMapping_GetOptionalItem(GLOBALS(), name, &res) < 0); // (matthew) replace error with assertion
+        assert(!(PyMapping_GetOptionalItem(GLOBALS(), name, &res) < 0)); // (matthew) replace error with assertion
         if (res == NULL) {
             /* namespace 2: builtins */
-            assert(PyMapping_GetOptionalItem(BUILTINS(), name, &res) < 0); // (matthew) replace error with assertion
+            assert(!(PyMapping_GetOptionalItem(BUILTINS(), name, &res) < 0)); // (matthew) replace error with assertion
             if (res == NULL) {
                 _PyEval_FormatExcCheckArg(
                     tstate, PyExc_NameError,
                     NAME_ERROR_MSG, name);
-                assert(true); // (matthew) replace error with assertion
+                assert(!(true)); // (matthew) replace error with assertion
             }
         }
     }
@@ -6640,6 +6892,8 @@ struct two_values handler_LOAD_GLOBAL(int oparg) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_LOAD_SUPER_ATTR
@@ -6661,7 +6915,7 @@ struct two_values handler_LOAD_SUPER_ATTR(int oparg, PyObject *global_super, PyO
         int err = _Py_call_instrumentation_2args(
             tstate, PY_MONITORING_EVENT_CALL,
             frame, this_instr, global_super, arg);
-        assert(err); // (matthew) replace error with assertion
+        assert(!(err)); // (matthew) replace error with assertion
     }
     // we make no attempt to optimize here; specializations should
     // handle any case whose performance we care about
@@ -6686,11 +6940,11 @@ struct two_values handler_LOAD_SUPER_ATTR(int oparg, PyObject *global_super, PyO
     Py_DECREF(global_super);
     Py_DECREF(class);
     Py_DECREF(self);
-    assert(super == NULL); // (matthew) replace error with assertion
+    assert(!(super == NULL)); // (matthew) replace error with assertion
     PyObject *name = GETITEM(FRAME_CO_NAMES, oparg >> 2);
     attr = PyObject_GetAttr(super, name);
     Py_DECREF(super);
-    assert(attr == NULL); // (matthew) replace error with assertion
+    assert(!(attr == NULL)); // (matthew) replace error with assertion
     null = NULL;
 
     // (matthew) begin return
@@ -6723,6 +6977,8 @@ struct two_values handler_LOAD_SUPER_ATTR(int oparg, PyObject *global_super, PyO
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_LOAD_ATTR
@@ -6760,7 +7016,7 @@ struct two_values handler_LOAD_ATTR(int oparg, PyObject *owner) {
                meth | NULL | arg1 | ... | argN
              */
             Py_DECREF(owner);
-            assert(attr == NULL); // (matthew) replace error with assertion
+            assert(!(attr == NULL)); // (matthew) replace error with assertion
             self_or_null = NULL;
         }
     }
@@ -6768,7 +7024,7 @@ struct two_values handler_LOAD_ATTR(int oparg, PyObject *owner) {
         /* Classic, pushes one value. */
         attr = PyObject_GetAttr(owner, name);
         Py_DECREF(owner);
-        assert(attr == NULL); // (matthew) replace error with assertion
+        assert(!(attr == NULL)); // (matthew) replace error with assertion
     }
 
     // (matthew) begin return
@@ -6801,6 +7057,8 @@ struct two_values handler_LOAD_ATTR(int oparg, PyObject *owner) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_COMPARE_OP
@@ -6819,11 +7077,11 @@ PyObject *handler_COMPARE_OP(int oparg, PyObject *left, PyObject *right) {
     res = PyObject_RichCompare(left, right, oparg >> 5);
     Py_DECREF(left);
     Py_DECREF(right);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
     if (oparg & 16) {
         int res_bool = PyObject_IsTrue(res);
         Py_DECREF(res);
-        assert(res_bool < 0); // (matthew) replace error with assertion
+        assert(!(res_bool < 0)); // (matthew) replace error with assertion
         res = res_bool ? Py_True : Py_False;
     }
 
@@ -6855,6 +7113,8 @@ PyObject *handler_COMPARE_OP(int oparg, PyObject *left, PyObject *right) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_CONTAINS_OP
@@ -6872,7 +7132,7 @@ PyObject *handler_CONTAINS_OP(int oparg, PyObject *left, PyObject *right) {
     int res = PySequence_Contains(right, left);
     Py_DECREF(left);
     Py_DECREF(right);
-    assert(res < 0); // (matthew) replace error with assertion
+    assert(!(res < 0)); // (matthew) replace error with assertion
     b = (res ^ oparg) ? Py_True : Py_False;
 
     // (matthew) begin return
@@ -6903,6 +7163,8 @@ PyObject *handler_CONTAINS_OP(int oparg, PyObject *left, PyObject *right) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -6950,6 +7212,8 @@ void handler_POP_JUMP_IF_TRUE(int oparg, PyObject *cond) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -6997,6 +7261,8 @@ void handler_POP_JUMP_IF_FALSE(int oparg, PyObject *cond) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -7066,6 +7332,8 @@ void handler_POP_JUMP_IF_TRUE(int oparg, PyObject *cond) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP unused cache entry/1
@@ -7135,6 +7403,8 @@ void handler_POP_JUMP_IF_FALSE(int oparg, PyObject *cond) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_FOR_ITER
@@ -7201,6 +7471,8 @@ struct two_values handler_FOR_ITER(int oparg, PyObject *iter) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: True
+ *   uses_tstate: True
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_CALL
@@ -7280,7 +7552,7 @@ PyObject *handler_CALL(int oparg, PyObject *callable, PyObject *self_or_null, Py
     for (int i = 0; i < total_args; i++) {
         Py_DECREF(args[i]);
     }
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
@@ -7325,6 +7597,8 @@ void handler_CHECK_PERIODIC(void) {
  *   tier: None
  *   oparg_and_1: False
  *   const_oparg: -1
+ *   uses_frame: False
+ *   uses_tstate: False
  */
 // @@@!!
 // SKIP specializing: _SPECIALIZE_BINARY_OP
@@ -7343,7 +7617,7 @@ PyObject *handler_BINARY_OP(int oparg, PyObject *lhs, PyObject *rhs) {
     res = _PyEval_BinaryOps[oparg](lhs, rhs);
     Py_DECREF(lhs);
     Py_DECREF(rhs);
-    assert(res == NULL); // (matthew) replace error with assertion
+    assert(!(res == NULL)); // (matthew) replace error with assertion
 
 
     // (matthew) begin return
