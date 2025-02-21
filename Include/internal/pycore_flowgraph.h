@@ -26,7 +26,9 @@ void _PyCfgBuilder_DebugPrint(struct _PyCfgBuilder *);
 void _PyCfgBuilder_DebugPrintInstructionSequence(_PyInstructionSequence *seq);
 
 void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *);
+void _PyCfgBasicblock_ComputeImmediateDominators(struct _PyCfgBuilder *);
 void _PyCfgBuilder_ReversePostorder(struct _PyCfgBuilder *);
+void _PyCfgBasicblock_ComputeDominatorTree(struct _PyCfgBuilder *);
 
 int _PyCfg_OptimizeCodeUnit(struct _PyCfgBuilder *g, PyObject *consts, PyObject *const_cache,
                             int nlocals, int nparams, int firstlineno);
