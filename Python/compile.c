@@ -7680,7 +7680,9 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
 
     /* new dominator stuff */
     _PyCfgBuilder_ComputeDominators(g);
+    _PyCfgBasicblock_ComputeImmediateDominators(g);
     _PyCfgBuilder_ReversePostorder(g);
+    _PyCfgBasicblock_ComputeDominatorTree(g);
     printf("CFG after optimization and dominator calculation:\n");
     _PyCfgBuilder_DebugPrint(g);
 

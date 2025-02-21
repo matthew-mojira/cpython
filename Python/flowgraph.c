@@ -49,7 +49,10 @@ typedef struct _PyCfgBasicblock {
        block reached by normal control flow. */
     struct _PyCfgBasicblock *b_next;
 
+    int any_label;  // TODO label each basic block
     struct _PyCfgBasicblock **dominators;
+    struct _PyCfgBasicblock *imm_dominator;
+    struct _PyCfgBasicblock **imm_dominates; // children
 
     /* number of instructions used */
     int b_iused;
@@ -58,6 +61,7 @@ typedef struct _PyCfgBasicblock {
     /* Used by add_checks_for_loads_of_unknown_variables */
     uint64_t b_unsafe_locals_mask;
     /* Number of predecessors that a block has. */
+    /* matthew: unsure if this includes back edges or not */
     int b_predecessors;
     /* depth of stack upon entry of block, computed by stackdepth() */
     int b_startdepth;
@@ -477,11 +481,14 @@ _PyCfgBuilder_DebugPrint(cfg_builder *g) {
 
         /* calculate dominate count */
         if (b->dominators != NULL) {
-            int dominators = 0;
+            int dominators = 0, dom_children = 0;
             int size = _PyCfgBuilder_GetSize(g);
             for (int i = 0; i < size; i++)
                 if (b->dominators[i] != NULL) dominators += 1;
-            printf("Dominators: %d, predecessors: %d\n", dominators, b->b_predecessors);
+            for (int i = 0; i < size; i++)
+                if (b->imm_dominates[i] != NULL) dom_children += 1;
+            printf("Dominators: %d, immediately dominates: %d, predecessors: %d\n",
+                    dominators, dom_children, b->b_predecessors);
         }
 
         if (b->b_instr == NULL) {
@@ -3025,3 +3032,278 @@ void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *g) {
     } while (changed);
 }
 
+/* require dominators to be computed */
+void _PyCfgBasicblock_ComputeImmediateDominators(cfg_builder *g) {
+    int size = _PyCfgBuilder_GetSize(g);
+
+    for (basicblock *b = g->g_block_list; b != NULL; b = b->b_list) {
+        if (b == g->g_entryblock) {
+            b->imm_dominator = NULL;
+            continue;
+        }
+
+        // non start node
+        basicblock **candidates = PyMem_Calloc(size, sizeof(basicblock *));
+        memcpy(candidates, b->dominators, size * sizeof(basicblock *));
+
+        // remove node from its own dominator set
+        for (int i = 0; i < size; i++) {
+            basicblock *c = candidates[i];
+
+            if (c == b) {
+                candidates[i] = NULL;
+                break;
+            }
+        }
+
+        // for each node in candidates
+        for (int i = 0; i < size; i++) {
+            basicblock *p = candidates[i];
+            if (p == NULL) continue;
+            int dominated_by_other = 0;
+
+            /* for each node in candidates */
+            for (int j = 0; j < size; j++) {
+                basicblock *q = candidates[j];
+                if (q == NULL) continue;
+
+                if (p != q) {
+                    // if p in dom[q]
+                    int includes = 0;
+                    for (int k = 0; k < size; k++) {
+                        if (p == q->dominators[k]) {
+                            includes = 1;
+                            break;
+                        }
+                    }
+
+                    if (includes) {
+                        dominated_by_other = 1;
+                        break;
+                    }
+                }
+            }
+
+            if (!dominated_by_other) {
+                b->imm_dominator = p;
+                break;
+            }
+        }
+
+        PyMem_Free(candidates);
+    }
+}
+
+void _PyCfgBasicblock_ComputeDominatorTree(cfg_builder *g) {
+    int size = _PyCfgBuilder_GetSize(g);
+
+    // initialize immediately dominates list
+    for (basicblock *b = g->g_entryblock; b != NULL; b = b->b_next) {
+        b->imm_dominates = PyMem_Calloc(size, sizeof(basicblock *));
+    }
+
+    // populate immediately dominates list
+    for (basicblock *b = g->g_entryblock; b != NULL; b = b->b_next) {
+        if (b->imm_dominator == NULL) continue;
+
+        for (int i = 0; i < size; i++) {
+            if (b->imm_dominator->imm_dominates[i] == NULL) {
+                b->imm_dominator->imm_dominates[i] = b;
+                break;
+            }
+        }
+    }
+
+    // sort by reverse postorder traversal
+    for (basicblock *b = g->g_entryblock; b != NULL; b = b->b_next) {
+        basicblock **tmp = PyMem_Calloc(size, sizeof(basicblock *));
+        int tmp_idx = 0;
+
+        for (int i = 0; i < size; i++) {
+            basicblock *c = g->g_postorder[i];
+            // if c is one of the in the lists, add it to sorts
+            int found = 0;
+            for (int j = 0; j < size; j++) {
+                if (b->imm_dominates[j] == c) {
+                    found = 1;
+                    break;
+                }
+            }
+
+            if (found)
+                tmp[tmp_idx++] = c;
+        }
+
+        // copy temporary to real
+        memcpy(b->imm_dominates, tmp, size * sizeof(basicblock *));
+
+        PyMem_Free(tmp); // XXX calloc'd and free'd every iteration
+    }
+}
+
+// WASM types
+
+typedef struct _wasm_structure {
+    enum { WASM_BLOCK, WASM_IF, WASM_LOOP, PY_WRAPPER } w_type;
+    union {
+
+    } w_data;
+} WasmStructure;
+
+// context stuff
+
+typedef struct _context {
+    enum { IF_THEN_ELSE, LOOP_HEADED_BY, BLOCK_FOLLOWED_BY } c_type;
+    basicblock *c_data; /* do not read this if IF_THEN_ELSE */
+    struct _context *c_next;
+} Context;
+
+Context *inside(Context *head, Context *tail) {
+    head->c_next = tail;
+    return head;
+}
+int entry_label(basicblock *b) {
+    return b->any_label;
+}
+
+cfg_instr *node_body(basicblock *b) {
+    return b->b_instr;
+}
+
+/* how a node ends and its successors */
+typedef struct _control_flow {
+    enum { UNCONDITIONAL, CONDITIONAL, TERMINAL } flow_type;
+    union {
+        basicblock *unconditional;
+        struct { basicblock *b_true; basicblock *b_false; } conditional;
+        /* do not read this union if TERMINAL */
+    } flow_data;
+} control_flow;
+
+int is_backward(cfg_builder *g, basicblock *from, basicblock *to);
+int is_merge_block(cfg_builder *g, basicblock *b);
+int is_loop_header(cfg_builder *g, basicblock *b);
+
+// flow_leaving
+
+// FIXME return type
+void do_tree(cfg_builder *g, basicblock *b, Context *context);
+
+
+void do_tree(cfg_builder *g, basicblock *b, Context *context) {
+    // get children of b
+    int size = _PyCfgBuilder_GetSize(g);
+    basicblock **children = PyMem_Calloc(size, sizeof(basicblock *)); // XXX memory leak
+    int i = 0;
+
+    // filter for has_merge_root
+    for (int j = 0; j < i; j++) {
+        if (is_merge_block(g, b->imm_dominates[j]))
+            children[i++] = b->imm_dominates[j];
+    }
+    // {i} also holds max bounds for children
+
+    if (is_loop_header(g, b)) {
+
+    } else {
+        // codeForX context
+        return node_within(x, children, context);
+    }
+
+}
+
+void node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *ctx);
+
+
+int get_forward_predecessors(cfg_builder *g, basicblock *b) {
+    int count = 0;
+    int size = _PyCfgBuilder_GetSize(g);
+
+    for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
+        // XXX duplicate code: not a predecessor
+        if (!(b == c->b_next && BB_HAS_FALLTHROUGH(c))) {
+            if (c->b_instr == NULL) continue;
+
+            int found = 0;
+            for (int j = 0; j < c->b_iused; j++) {
+                cfg_instr ins = c->b_instr[j];
+                if (b == ins.i_target || b == ins.i_except) {
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) continue;
+        }
+
+        // c must not be a back edge, so check postorder map
+    }
+}
+
+
+// auxiliary functions
+
+int is_backward(cfg_builder *g, basicblock *from, basicblock *to) {
+    int i = 0;
+    while (g->g_postorder[i++] != to);
+
+    int size = _PyCfgBuilder_GetSize(g);
+    // {i} has index of {to}, check if {from} is later
+    for (; i < size; i++) {
+        if (g->g_postorder[i] == from) return true;
+    }
+    return false;
+}
+
+int is_merge_block(cfg_builder *g, basicblock *b) {
+    int preds = 0;
+
+    for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
+        // XXX duplicate code: not a predecessor
+        if (!(b == c->b_next && BB_HAS_FALLTHROUGH(c))) {
+            if (c->b_instr == NULL) continue;
+
+            int found = 0;
+            for (int j = 0; j < c->b_iused; j++) {
+                cfg_instr ins = c->b_instr[j];
+                if (b == ins.i_target || b == ins.i_except) {
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) continue;
+        }
+
+        // predecessor: check not backward
+        if (!is_backward(g, c, b))
+            preds += 1;
+    }
+
+    return preds - 1;  // preds > 1
+}
+
+int is_loop_header(cfg_builder *g, basicblock *g) {
+    int preds = 0;
+
+    for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
+        // XXX duplicate code: not a predecessor
+        if (!(b == c->b_next && BB_HAS_FALLTHROUGH(c))) {
+            if (c->b_instr == NULL) continue;
+
+            int found = 0;
+            for (int j = 0; j < c->b_iused; j++) {
+                cfg_instr ins = c->b_instr[j];
+                if (b == ins.i_target || b == ins.i_except) {
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) continue;
+        }
+
+        // predecessor: check for a backward
+        if (is_backward(g, c, b))
+            preds += 1;
+    }
+
+    return preds;
+}
