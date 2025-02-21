@@ -48,6 +48,9 @@ typedef struct _PyCfgBasicblock {
     /* If b_next is non-NULL, it is a pointer to the next
        block reached by normal control flow. */
     struct _PyCfgBasicblock *b_next;
+
+    struct _PyCfgBasicblock **dominators;
+
     /* number of instructions used */
     int b_iused;
     /* length of instruction array (b_instr) */
@@ -80,6 +83,8 @@ struct _PyCfgBuilder {
     struct _PyCfgBasicblock *g_block_list;
     /* pointer to the block currently being constructed */
     struct _PyCfgBasicblock *g_curblock;
+    /* postorder traversal for beyond relooper */
+    struct _PyCfgBasicblock **g_postorder;
     /* label for the next instruction to be placed */
     _PyJumpTargetLabel g_current_label;
 };
@@ -263,7 +268,6 @@ basicblock_insert_instruction(basicblock *block, int pos, cfg_instr *instr) {
 }
 
 /* For debugging purposes only */
-#if 0
 static void
 dump_instr(cfg_instr *i)
 {
@@ -312,7 +316,6 @@ _PyCfgBuilder_DumpGraph(const basicblock *entryblock)
     }
 }
 
-#endif
 
 
 /***** CFG construction and modification *****/
@@ -460,11 +463,67 @@ _PyCfgBuilder_CheckSize(cfg_builder *g)
     return SUCCESS;
 }
 
+
+void
+_PyCfgBuilder_DebugPrint(cfg_builder *g) {
+
+    int nblocks = 0;
+    for (basicblock *b = g->g_block_list; b != NULL; b = b->b_list) {
+        printf("Block %d", nblocks++);
+        if (b->b_label.id != -1) printf(" (%d)", b->b_label.id);
+        if (b == g->g_entryblock) printf(" (ENTRY BLOCK)");
+        printf("\n");
+        printf("startdepth: %d\n", b->b_startdepth);
+
+        /* calculate dominate count */
+        if (b->dominators != NULL) {
+            int dominators = 0;
+            int size = _PyCfgBuilder_GetSize(g);
+            for (int i = 0; i < size; i++)
+                if (b->dominators[i] != NULL) dominators += 1;
+            printf("Dominators: %d, predecessors: %d\n", dominators, b->b_predecessors);
+        }
+
+        if (b->b_instr == NULL) {
+            printf("NULL\n");
+        } else {
+            /* b_instr is a dynamically-sized array where
+             * b_ialloc is the capacity and b_iused is the real length
+             */
+            for (int i = 0; i < b->b_iused; i++) {
+                cfg_instr c = b->b_instr[i];
+                printf(" %s %d", _PyOpcode_OpName[c.i_opcode], c.i_oparg);
+                if (is_jump(&c)) printf("(JUMP)");
+                printf("\n");
+            }
+        }
+    }
+}
+
+void
+_PyCfgBuilder_DebugPrintInstructionSequence(_PyInstructionSequence *s) {
+    for (int i = 0; i < s->s_used; i++) {
+        _PyInstruction c = s->s_instrs[i];
+        printf(" %s %d\n", _PyOpcode_OpName[c.i_opcode], c.i_oparg);
+    }
+}
+
+int
+_PyCfgBuilder_GetSize(cfg_builder *g)
+{
+    int nblocks = 0;
+    for (basicblock *b = g->g_block_list; b != NULL; b = b->b_list) {
+        nblocks++;
+    }
+    return nblocks;
+}
+
 int
 _PyCfgBuilder_UseLabel(cfg_builder *g, jump_target_label lbl)
 {
     g->g_current_label = lbl;
     return cfg_builder_maybe_start_new_block(g);
+
 }
 
 int
@@ -2783,3 +2842,186 @@ _PyCfg_JumpLabelsToTargets(cfg_builder *g)
     RETURN_IF_ERROR(label_exception_targets(g->g_entryblock));
     return SUCCESS;
 }
+
+
+void dfs(int size, basicblock *b, basicblock **visited, basicblock **postorder) {
+    // make sure node not already visited
+    int j;
+    for (j = 0; visited[j] != NULL; j++)
+        if (visited[j] == b) return;
+    visited[j] = b;
+
+    // successors
+    if (b->b_next != NULL && BB_HAS_FALLTHROUGH(b))
+        dfs(size, b->b_next, visited, postorder);
+    for (int i = 0; i < b->b_iused; i++) {
+        if (b->b_instr[i].i_target != NULL)
+            dfs(size, b->b_instr[i].i_target, visited, postorder);
+        if (b->b_instr[i].i_except != NULL)
+            dfs(size, b->b_instr[i].i_except, visited, postorder);
+    }
+
+    while (postorder[--size] != NULL);
+    postorder[size] = b;
+}
+
+
+/* require dominators to be computed first */
+void _PyCfgBuilder_ReversePostorder(struct _PyCfgBuilder *g) {
+    int size = _PyCfgBuilder_GetSize(g);
+    g->g_postorder = PyMem_Calloc(size, sizeof(basicblock *));
+    basicblock **visited = PyMem_Calloc(size, sizeof(basicblock *));
+
+    dfs(size, g->g_entryblock, visited, g->g_postorder);
+}
+
+/* Using the basic algorithm from Wikipedia:
+ *   https://en.wikipedia.org/wiki/Dominator_(graph_theory)
+ * which is apparently O(n^2), so don't make complicated functions.
+ */
+void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *g) {
+    int size = _PyCfgBuilder_GetSize(g);
+
+    for (basicblock *b = g->g_block_list; b != NULL; b = b->b_list) {
+        if (b == g->g_entryblock) {
+            // dominator of the start node is the dominator itself
+            b->dominators = (basicblock **) PyMem_Calloc(size, sizeof(basicblock *)); // XXX memory leak
+            b->dominators[0] = g->g_entryblock;
+        } else {
+            // for all other nodes, set all nodes as the dominators
+            b->dominators = (basicblock **) PyMem_Calloc(size, sizeof(basicblock *)); // XXX memory leak
+            int i = 0;
+            for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
+                b->dominators[i++] = c;
+            }
+            assert(i == size);
+        }
+    }
+
+    int changed;
+    do {
+        changed = 0;
+
+        for (basicblock *b = g->g_block_list; b != NULL; b = b->b_list) {
+            if (b == g->g_entryblock) continue;
+
+            basicblock **new_doms = (basicblock **) PyMem_Calloc(size, sizeof(basicblock *)); // XXX memory leak
+
+            if (b->b_predecessors > 0) {
+                int i = 0;
+                for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list)
+                    new_doms[i++] = c;
+
+                // get predecessors
+                // printf("starting to get predecessors\n");
+                int predecessors = 0;
+                for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
+                    // not a predecessor
+                    if (!(b == c->b_next && BB_HAS_FALLTHROUGH(c))) {
+                        // printf("next missed: ");
+                        if (c->b_instr == NULL) {
+                            printf("null\n");
+                            continue;
+                        }
+                        int found = 0;
+                        for (int j = 0; j < c->b_iused; j++) {
+                            cfg_instr ins = c->b_instr[j];
+                            if (b == ins.i_target || b == ins.i_except) {
+                                found = 1;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            // printf("not target or except\n");
+                            continue;
+                        }
+                        // printf("matched on i_target or i_except\n");
+                    } else {
+                        // printf("match on next\n");
+                    }
+                    predecessors += 1;
+
+                    // {c} is a predecessor, take intersection with new_doms
+                    for (i = 0; i < size; i++) {
+                        if (new_doms[i] == NULL) continue;
+
+                        // check if new_doms[i] appears in the predecessor's dominator set
+                        int exists = 0;
+                        for (int j = 0; j < size; j++) {
+                            if (new_doms[i] == c->dominators[j]) {
+                                exists = 1;
+                                break;
+                            }
+                        }
+
+                        if (!exists) {
+                            new_doms[i] = NULL;
+                        }
+                    }
+                }
+                assert(predecessors == b->b_predecessors);
+                // FIXME this still fails sometimes
+                if (predecessors != b->b_predecessors) {
+                    printf("Discrepancy (%d): expected %d, got %d\n", b->b_label.id, b->b_predecessors, predecessors);
+                }
+            }
+
+            // Add b to the dominator set
+            int b_exists = 0;
+            for (int i = 0; i < size; i++) {
+                if (new_doms[i] == b) {
+                    b_exists = 1;
+                    break;
+                }
+            }
+            if (!b_exists) {
+                // add to empty slot
+                int i = 0;
+                while (!(new_doms[i] == NULL)) i++;
+                new_doms[i] = b;
+            }
+
+            // check if this new_doms is different than original doms
+            int subset = 1;
+            for (int i = 0; i < size; i++) {
+                if (b->dominators[i] == NULL) continue;
+                int found = 0;
+                for (int j = 0; j < size; j++) {
+                    if (b->dominators[i] == new_doms[j]) {
+                        found = 1;
+                        break;
+                    }
+                }
+                if (!found) {
+                    subset = 0;
+                    break;
+                }
+            }
+            int supset = 1;
+            for (int i = 0; i < size; i++) {
+                if (new_doms[i] == NULL) continue;
+                int found = 0;
+                for (int j = 0; j < size; j++) {
+                    if (b->dominators[j] == new_doms[i]) {
+                        found = 1;
+                        break;
+                    }
+                }
+                if (!found) {
+                    supset = 0;
+                    break;
+                }
+            }
+
+            if (!(subset && supset)) {
+                // different
+                PyMem_Free(b->dominators);
+                b->dominators = new_doms;
+                changed = 1;
+            } else {
+                PyMem_Free(new_doms);
+            }
+        }
+    } while (changed);
+}
+

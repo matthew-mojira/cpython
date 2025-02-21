@@ -20,6 +20,13 @@ int _PyCfgBuilder_Addop(struct _PyCfgBuilder *g, int opcode, int oparg, _Py_Sour
 struct _PyCfgBuilder* _PyCfgBuilder_New(void);
 void _PyCfgBuilder_Free(struct _PyCfgBuilder *g);
 int _PyCfgBuilder_CheckSize(struct _PyCfgBuilder* g);
+int _PyCfgBuilder_GetSize(struct _PyCfgBuilder* g);
+
+void _PyCfgBuilder_DebugPrint(struct _PyCfgBuilder *);
+void _PyCfgBuilder_DebugPrintInstructionSequence(_PyInstructionSequence *seq);
+
+void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *);
+void _PyCfgBuilder_ReversePostorder(struct _PyCfgBuilder *);
 
 int _PyCfg_OptimizeCodeUnit(struct _PyCfgBuilder *g, PyObject *consts, PyObject *const_cache,
                             int nlocals, int nparams, int firstlineno);

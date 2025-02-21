@@ -200,6 +200,7 @@ _PyCompile_EnsureArrayLargeEnough(int idx, void **array, int *alloc,
 
 static cfg_builder*
 instr_sequence_to_cfg(instr_sequence *seq) {
+    printf("Instruction sequence to CFG\n");
     if (_PyInstructionSequence_ApplyLabelMap(seq) < 0) {
         return NULL;
     }
@@ -234,6 +235,11 @@ instr_sequence_to_cfg(instr_sequence *seq) {
     if (_PyCfgBuilder_CheckSize(g) < 0) {
         goto error;
     }
+
+    /* print out list of instructions */
+    // printf("Detected basic blocks: %u\n", _PyCfgBuilder_GetSize(g));
+    // _PyCfgBuilder_DebugPrint(g);
+
     return g;
 error:
     _PyCfgBuilder_Free(g);
@@ -7651,7 +7657,9 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
     if (consts == NULL) {
         goto error;
     }
+    printf("%s before instr_sequence_to_cfg\n", __func__);
     g = instr_sequence_to_cfg(u->u_instr_sequence);
+    printf("%s after instr_sequence_to_cfg\n", __func__);
     if (g == NULL) {
         goto error;
     }
@@ -7659,10 +7667,22 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
     int nparams = (int)PyList_GET_SIZE(u->u_ste->ste_varnames);
     assert(u->u_metadata.u_firstlineno);
 
+    printf("CFG before optimization:\n");
+    _PyCfgBuilder_DebugPrint(g);
+
     if (_PyCfg_OptimizeCodeUnit(g, consts, const_cache, nlocals,
                                 nparams, u->u_metadata.u_firstlineno) < 0) {
         goto error;
     }
+
+    printf("CFG after optimization:\n");
+    _PyCfgBuilder_DebugPrint(g);
+
+    /* new dominator stuff */
+    _PyCfgBuilder_ComputeDominators(g);
+    _PyCfgBuilder_ReversePostorder(g);
+    printf("CFG after optimization and dominator calculation:\n");
+    _PyCfgBuilder_DebugPrint(g);
 
     int stackdepth;
     int nlocalsplus;
@@ -7671,6 +7691,9 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
                                                  &optimized_instrs) < 0) {
         goto error;
     }
+
+    printf("Final instruction sequence:\n");
+    _PyCfgBuilder_DebugPrintInstructionSequence(&optimized_instrs);
 
     /** Assembly **/
 
@@ -7931,7 +7954,9 @@ _PyCompile_OptimizeCfg(PyObject *seq, PyObject *consts, int nlocals)
     }
 
     PyObject *res = NULL;
+    printf("%s before instr_sequence_to_cfg\n", __func__);
     cfg_builder *g = instr_sequence_to_cfg((instr_sequence*)seq);
+    printf("%s after instr_sequence_to_cfg\n", __func__);
     if (g == NULL) {
         goto error;
     }
@@ -7967,7 +7992,9 @@ _PyCompile_Assemble(_PyCompile_CodeUnitMetadata *umd, PyObject *filename,
         return NULL;
     }
 
+    printf("%s before instr_sequence_to_cfg\n", __func__);
     g = instr_sequence_to_cfg((instr_sequence*)seq);
+    printf("%s after instr_sequence_to_cfg\n", __func__);
     if (g == NULL) {
         goto error;
     }
