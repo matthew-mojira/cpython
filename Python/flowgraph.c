@@ -3147,7 +3147,7 @@ typedef struct _wasm_structure {
     union {
 
     } w_data;
-} WasmStructure;
+} Wasm;
 
 // context stuff
 
@@ -3157,10 +3157,46 @@ typedef struct _context {
     struct _context *c_next;
 } Context;
 
+Context *block_followed_by(basicblock *b) {
+    Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
+    c->c_type = BLOCK_FOLLOWED_BY;
+    c->c_data = b;
+    c->c_next = NULL;
+    return c;
+}
+
+Context *if_then_else(void) {
+    Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
+    c->c_type = IF_THEN_ELSE;
+    c->c_data = NULL;
+    c->c_next = NULL;
+    return c;
+}
+
+Context *loop_headed_by(basicblock *b) {
+    Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
+    c->c_type = LOOP_HEADED_BY;
+    c->c_data = b;
+    c->c_next = NULL;
+    return c;
+}
+
 Context *inside(Context *head, Context *tail) {
     head->c_next = tail;
     return head;
 }
+
+int context_index(basicblock *b, Context *ctx) {
+    switch (ctx->c_type) {
+    case BLOCK_FOLLOWED_BY:
+    case LOOP_HEADED_BY:
+        if (b == ctx->c_data) return 0;
+    default:
+        // assert non-null?
+        return 1 + context_index(b, ctx->c_next);
+    }
+}
+
 int entry_label(basicblock *b) {
     return b->any_label;
 }
@@ -3171,7 +3207,7 @@ cfg_instr *node_body(basicblock *b) {
 
 /* how a node ends and its successors */
 typedef struct _control_flow {
-    enum { UNCONDITIONAL, CONDITIONAL, TERMINAL } flow_type;
+    enum { UNCONDITIONAL, CONDITIONAL, TERMINAL_FLOW } flow_type;
     union {
         basicblock *unconditional;
         struct { basicblock *b_true; basicblock *b_false; } conditional;
@@ -3179,17 +3215,41 @@ typedef struct _control_flow {
     } flow_data;
 } control_flow;
 
+control_flow flow_leaving(cfg_builder *g, basicblock *b) {
+    cfg_instr *last = basicblock_last_instr(b);
+    assert(last);
+
+    control_flow flow;
+    int opcode = last->i_opcode;
+
+    if (IS_SCOPE_EXIT_OPCODE(opcode)) {
+        flow.flow_type = TERMINAL_FLOW;
+    } else if (IS_UNCONDITIONAL_JUMP_OPCODE(opcode)) {
+        flow.flow_type = UNCONDITIONAL;
+        flow.flow_data.unconditional = last->i_target;
+    } else if (OPCODE_HAS_JUMP(opcode)) {
+        flow.flow_type = CONDITIONAL;
+        flow.flow_data.conditional.b_true = last->i_target;
+        flow.flow_data.conditional.b_false = b->b_next;
+    } else {
+        flow.flow_type = UNCONDITIONAL;
+        flow.flow_data.unconditional = b->b_next;
+    }
+
+    return flow;
+}
+
 int is_backward(cfg_builder *g, basicblock *from, basicblock *to);
 int is_merge_block(cfg_builder *g, basicblock *b);
 int is_loop_header(cfg_builder *g, basicblock *b);
 
 // flow_leaving
 
-// FIXME return type
-void do_tree(cfg_builder *g, basicblock *b, Context *context);
+Wasm do_tree(cfg_builder *, basicblock *, Context *);
+Wasm node_within(cfg_builder *, basicblock *, basicblock **, Context *);
+Wasm do_branch(cfg_builder *, basicblock *, basicblock *, Context *);
 
-
-void do_tree(cfg_builder *g, basicblock *b, Context *context) {
+Wasm do_tree(cfg_builder *g, basicblock *b, Context *context) {
     // get children of b
     int size = _PyCfgBuilder_GetSize(g);
     basicblock **children = PyMem_Calloc(size, sizeof(basicblock *)); // XXX memory leak
@@ -3203,15 +3263,63 @@ void do_tree(cfg_builder *g, basicblock *b, Context *context) {
     // {i} also holds max bounds for children
 
     if (is_loop_header(g, b)) {
-
+        Context *new_c = inside(loop_headed_by(b), context);
+        return wasm_loop(node_within(g, b, children, new_c));
     } else {
         // codeForX context
-        return node_within(x, children, context);
+        return node_within(g, b, children, context);
     }
-
 }
 
-void node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *ctx);
+Wasm node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *ctx) {
+    /* match on children being empty */
+    int size = _PyCfgBuilder_GetSize(g);
+    int empty = 1;
+    int i;
+    for (i = 0; i < size; i++) {
+        if (children[i] != NULL) {
+            empty = 0;
+            break;
+        }
+    }
+    if (empty) {
+        Wasm act_x = wasm_wrapper((void *) b);
+        Wasm second;
+
+        control_flow flow = flow_leaving(g, b);
+        switch (flow.flow_type) {
+        case UNCONDITIONAL:
+            second = do_branch(g, b, flow.flow_data.unconditional, ctx);
+            break;
+        case CONDITIONAL:
+            // XXX this leaks memory
+            // in fact the entire context leaks memory
+            second = wasm_if(do_branch(g, flow.flow_data.conditional.b_true, inside(if_then_else(), ctx)),
+                             do_branch(g, flow.flow_data.conditional.b_false, inside(if_then_else(), ctx)));
+            break;
+        case TERMINAL_FLOW:
+            second = wasm_return();
+            break;
+        }
+
+        return wasm_append(act_x, second);
+    } else {
+        /* {i} has index of first element */
+        basicblock *y_n = children[i];
+        children[i] = NULL; /* ys */
+
+        return wasm_append(wasm_block(node_within(b, children, inside(block_followed_by(y_n), context))),
+                           do_tree(g, b, context));
+    }
+}
+
+Wasm do_branch(cfg_builder *g, basicblock *src, basicblock *tgt, Context *ctx) {
+    if (is_backward(g, src, tgt) || is_merge_block(g, tgt)) {
+        return wasm_br(context_index(tgt, ctx));
+    } else {
+        return do_tree(g, tgt, ctx);
+    }
+}
 
 
 int get_forward_predecessors(cfg_builder *g, basicblock *b) {
@@ -3280,7 +3388,7 @@ int is_merge_block(cfg_builder *g, basicblock *b) {
     return preds - 1;  // preds > 1
 }
 
-int is_loop_header(cfg_builder *g, basicblock *g) {
+int is_loop_header(cfg_builder *g, basicblock *b) {
     int preds = 0;
 
     for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
