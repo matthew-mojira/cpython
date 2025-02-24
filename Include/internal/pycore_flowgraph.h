@@ -30,6 +30,9 @@ void _PyCfgBasicblock_ComputeImmediateDominators(struct _PyCfgBuilder *);
 void _PyCfgBuilder_ReversePostorder(struct _PyCfgBuilder *);
 void _PyCfgBasicblock_ComputeDominatorTree(struct _PyCfgBuilder *);
 
+void _PyCfgBuilder_BeyondRelooper(struct _PyCfgBuilder *);
+
+int _PyCfg_ResolveJumpsAndExceptions(struct _PyCfgBuilder *g);
 int _PyCfg_OptimizeCodeUnit(struct _PyCfgBuilder *g, PyObject *consts, PyObject *const_cache,
                             int nlocals, int nparams, int firstlineno);
 

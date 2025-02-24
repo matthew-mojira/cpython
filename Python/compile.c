@@ -7667,15 +7667,11 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
     int nparams = (int)PyList_GET_SIZE(u->u_ste->ste_varnames);
     assert(u->u_metadata.u_firstlineno);
 
-    printf("CFG before optimization:\n");
-    _PyCfgBuilder_DebugPrint(g);
-
-    if (_PyCfg_OptimizeCodeUnit(g, consts, const_cache, nlocals,
-                                nparams, u->u_metadata.u_firstlineno) < 0) {
+    if (_PyCfg_ResolveJumpsAndExceptions(g) < 0) {
         goto error;
     }
 
-    printf("CFG after optimization:\n");
+    printf("CFG before optimization:\n");
     _PyCfgBuilder_DebugPrint(g);
 
     /* new dominator stuff */
@@ -7683,8 +7679,26 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
     _PyCfgBasicblock_ComputeImmediateDominators(g);
     _PyCfgBuilder_ReversePostorder(g);
     _PyCfgBasicblock_ComputeDominatorTree(g);
-    printf("CFG after optimization and dominator calculation:\n");
+    printf("CFG after dominator calculation:\n");
     _PyCfgBuilder_DebugPrint(g);
+    printf("   /structured control flow in wasm:\n");
+    printf("  /=structured control flow in wasm:\n");
+    printf(" /==structured control flow in wasm:\n");
+    printf("/===structured control flow in wasm:\n");
+    _PyCfgBuilder_BeyondRelooper(g);
+    printf("\\===structured control flow in wasm:\n");
+    printf(" \\==structured control flow in wasm:\n");
+    printf("  \\=structured control flow in wasm:\n");
+    printf("   \\structured control flow in wasm:\n");
+
+    /* do not run on optimized code unit? */
+    if (_PyCfg_OptimizeCodeUnit(g, consts, const_cache, nlocals,
+                                nparams, u->u_metadata.u_firstlineno) < 0) {
+        goto error;
+    }
+
+    // printf("CFG after optimization:\n");
+    // _PyCfgBuilder_DebugPrint(g);
 
     int stackdepth;
     int nlocalsplus;
@@ -7694,8 +7708,8 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
         goto error;
     }
 
-    printf("Final instruction sequence:\n");
-    _PyCfgBuilder_DebugPrintInstructionSequence(&optimized_instrs);
+    // printf("Final instruction sequence:\n");
+    // _PyCfgBuilder_DebugPrintInstructionSequence(&optimized_instrs);
 
     /** Assembly **/
 
