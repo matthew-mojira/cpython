@@ -3150,8 +3150,19 @@ void _PyCfgBasicblock_ComputeDominatorTree(cfg_builder *g) {
 }
 
 // macros
-// #define PRINT_FUNC() printf("%s\n", __func__);
-#define PRINT_FUNC() ;
+// #define PRINT_FUNC_0() printf("%s()\n", __func__);
+// #define PRINT_FUNC_1(arg1) printf("%s(%p)\n", __func__, (void*)(arg1))
+// #define PRINT_FUNC_2(arg1, arg2) printf("%s(%p, %p)\n", __func__, (void*)(arg1), (void*)(arg2))
+// #define PRINT_FUNC_3(arg1, arg2, arg3) printf("%s(%p, %p, %p)\n", __func__, (void*)(arg1), (void*)(arg2), (void*)(arg3))
+// #define PRINT_FUNC_4(arg1, arg2, arg3, arg4) printf("%s(%p, %p, %p, %p)\n", __func__, (void*)(arg1), (void*)(arg2), (void*)(arg3), (void*)(arg4))
+// #define PRINT_FUNC_5(arg1, arg2, arg3, arg4, arg5) printf("%s(%p, %p, %p, %p, %p)\n", __func__, (void*)(arg1), (void*)(arg2), (void*)(arg3), (void*)(arg4), (void*)(arg5))
+#define PRINT_FUNC_0() ;
+#define PRINT_FUNC_1(arg1) ;
+#define PRINT_FUNC_2(arg1, arg2) ;
+#define PRINT_FUNC_3(arg1, arg2, arg3) ;
+#define PRINT_FUNC_4(arg1, arg2, arg3, arg4) ;
+#define PRINT_FUNC_5(arg1, arg2, arg3, arg4, arg5) ;
+// #define PRINT_FUNC() ;
 
 // WASM types
 
@@ -3185,7 +3196,7 @@ Wasm wasm_wrapper(void *);
 #define WASM_SET_TWO(X, Y) w->w_data.w_two.fst = ( X ); w->w_data.w_two.snd = ( Y );
 
 Wasm wasm_wrapper(void *data) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(data);
 
     Wasm w = WASM_ALLOC();
     w->w_type = PY_WRAPPER;
@@ -3194,7 +3205,7 @@ Wasm wasm_wrapper(void *data) {
 }
 
 Wasm wasm_block(Wasm b) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(b);
 
     Wasm w = WASM_ALLOC();
     w->w_type = WASM_BLOCK;
@@ -3203,7 +3214,7 @@ Wasm wasm_block(Wasm b) {
 }
 
 Wasm wasm_loop(Wasm b) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(b);
 
     Wasm w = WASM_ALLOC();
     w->w_type = WASM_LOOP;
@@ -3212,7 +3223,7 @@ Wasm wasm_loop(Wasm b) {
 }
 
 Wasm wasm_if(Wasm t, Wasm f) {
-    PRINT_FUNC();
+    PRINT_FUNC_2(t, f);
 
     Wasm w = WASM_ALLOC();
     w->w_type = WASM_IF;
@@ -3221,7 +3232,7 @@ Wasm wasm_if(Wasm t, Wasm f) {
 }
 
 Wasm wasm_br(int i) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(i);
 
     Wasm w = WASM_ALLOC();
     w->w_type = WASM_BR;
@@ -3230,7 +3241,7 @@ Wasm wasm_br(int i) {
 }
 
 Wasm wasm_return(void) {
-    PRINT_FUNC();
+    PRINT_FUNC_0();
 
     Wasm w = WASM_ALLOC();
     w->w_type = WASM_RETURN;
@@ -3238,7 +3249,7 @@ Wasm wasm_return(void) {
 }
 
 Wasm wasm_append(Wasm fst, Wasm snd) {
-    PRINT_FUNC();
+    PRINT_FUNC_2(fst, snd);
 
     Wasm w = WASM_ALLOC();
     w->w_type = STRUCT_APPEND;
@@ -3255,7 +3266,7 @@ typedef struct _context {
 } Context;
 
 Context *block_followed_by(basicblock *b) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(b);
 
     Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
     c->c_type = BLOCK_FOLLOWED_BY;
@@ -3265,7 +3276,7 @@ Context *block_followed_by(basicblock *b) {
 }
 
 Context *if_then_else(void) {
-    PRINT_FUNC();
+    PRINT_FUNC_0();
 
     Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
     c->c_type = IF_THEN_ELSE;
@@ -3275,7 +3286,7 @@ Context *if_then_else(void) {
 }
 
 Context *loop_headed_by(basicblock *b) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(b);
 
     Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
     c->c_type = LOOP_HEADED_BY;
@@ -3285,14 +3296,14 @@ Context *loop_headed_by(basicblock *b) {
 }
 
 Context *inside(Context *head, Context *tail) {
-    PRINT_FUNC();
+    PRINT_FUNC_2(head, tail);
 
     head->c_next = tail;
     return head;
 }
 
 int context_index(basicblock *b, Context *ctx) {
-    PRINT_FUNC();
+    PRINT_FUNC_2(b, ctx);
 
     assert(ctx != NULL);
     if (ctx == NULL) {
@@ -3312,14 +3323,8 @@ int context_index(basicblock *b, Context *ctx) {
     }
 }
 
-int entry_label(basicblock *b) {
-    PRINT_FUNC();
-
-    return b->any_label;
-}
-
 cfg_instr *node_body(basicblock *b) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(b);
 
     return b->b_instr;
 }
@@ -3335,7 +3340,7 @@ typedef struct _control_flow {
 } control_flow;
 
 control_flow flow_leaving(cfg_builder *g, basicblock *b) {
-    PRINT_FUNC();
+    PRINT_FUNC_2(g, b);
 
     cfg_instr *last = basicblock_last_instr(b);
     if (!last) {
@@ -3377,7 +3382,7 @@ Wasm node_within(cfg_builder *, basicblock *, basicblock **, Context *);
 Wasm do_branch(cfg_builder *, basicblock *, basicblock *, Context *);
 
 Wasm do_tree(cfg_builder *g, basicblock *b, Context *context) {
-    PRINT_FUNC();
+    PRINT_FUNC_3(g, b, context);
 
     // get children of b
     int size = _PyCfgBuilder_GetSize(g);
@@ -3397,10 +3402,10 @@ Wasm do_tree(cfg_builder *g, basicblock *b, Context *context) {
         if (is_merge_block(g, b->imm_dominates[j])) {
             children[i++] = b->imm_dominates[j];
         }
-        // printf("next \n");
     }
     // {i} also holds max bounds for children
     // printf("number of children: %d\n", i);
+    // return;
 
     if (is_loop_header(g, b)) {
         // printf("loop header\n");
@@ -3414,7 +3419,7 @@ Wasm do_tree(cfg_builder *g, basicblock *b, Context *context) {
 }
 
 Wasm node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *ctx) {
-    PRINT_FUNC();
+    PRINT_FUNC_4(g, b, children, ctx);
 
     /* match on children being empty */
     int size = _PyCfgBuilder_GetSize(g);
@@ -3428,6 +3433,8 @@ Wasm node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *
     }
     // printf("empty %d\n", empty);
     if (empty) {
+        PyMem_Free(children);
+
         Wasm act_x = wasm_wrapper((void *) b);
         Wasm second;
 
@@ -3450,20 +3457,19 @@ Wasm node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *
         return wasm_append(act_x, second);
     } else {
         /* {i} has index of first element */
-        // printf("%d, %d, %d\n", children, i, children[i]);
 
         basicblock *y_n = children[i];
         children[i] = NULL; /* ys */
 
         // printf("pre return\n");
         Wasm left = node_within(g, b, children, inside(block_followed_by(y_n), ctx));
-        Wasm right = do_tree(g, b, ctx);
+        Wasm right = do_tree(g, y_n, ctx);
         return wasm_append(wasm_block(left), right);
     }
 }
 
 Wasm do_branch(cfg_builder *g, basicblock *src, basicblock *tgt, Context *ctx) {
-    PRINT_FUNC();
+    PRINT_FUNC_4(g, src, tgt, ctx);
 
     if (is_backward(g, src, tgt) || is_merge_block(g, tgt)) {
         return wasm_br(context_index(tgt, ctx));
@@ -3476,10 +3482,9 @@ Wasm do_branch(cfg_builder *g, basicblock *src, basicblock *tgt, Context *ctx) {
 // auxiliary functions
 
 int is_backward(cfg_builder *g, basicblock *from, basicblock *to) {
-    PRINT_FUNC();
+    PRINT_FUNC_3(g, from, to);
 
     /* FIXME to is sometimes passed in as null */
-    // printf("%p, %p, %p\n", g, from, to);
 
     int i = 0;
     while (g->g_postorder[i++] != to);
@@ -3493,7 +3498,7 @@ int is_backward(cfg_builder *g, basicblock *from, basicblock *to) {
 }
 
 int is_merge_block(cfg_builder *g, basicblock *b) {
-    PRINT_FUNC();
+    PRINT_FUNC_2(g, b);
 
     int preds = 0;
 
@@ -3523,7 +3528,7 @@ int is_merge_block(cfg_builder *g, basicblock *b) {
 }
 
 int is_loop_header(cfg_builder *g, basicblock *b) {
-    PRINT_FUNC();
+    PRINT_FUNC_2(g, b);
 
     int preds = 0;
 
@@ -3554,7 +3559,7 @@ int is_loop_header(cfg_builder *g, basicblock *b) {
 #define PRINT_INDENT(S) for (int i = 0; i < indent; i++) putchar(' '); printf("%s\n", S );
 
 void wasm_print(Wasm w, int indent) {
-    PRINT_FUNC();
+    // PRINT_FUNC_2(w, indent);
 
     // printf("%d: ", w->w_type);
 
@@ -3616,8 +3621,9 @@ void wasm_print(Wasm w, int indent) {
 
 /* the big one, which also prints */
 void _PyCfgBuilder_BeyondRelooper(struct _PyCfgBuilder *g) {
-    PRINT_FUNC();
+    PRINT_FUNC_1(g);
 
     Wasm w = do_tree(g, g->g_entryblock, NULL);
+
     wasm_print(w, 0);
 }

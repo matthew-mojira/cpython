@@ -7691,15 +7691,10 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
     _PyCfgBasicblock_ComputeDominatorTree(g);
     printf("CFG after dominator calculation:\n");
     _PyCfgBuilder_DebugPrint(g);
-    printf("   /structured control flow in wasm:\n");
-    printf("  /=structured control flow in wasm:\n");
-    printf(" /==structured control flow in wasm:\n");
-    printf("/===structured control flow in wasm:\n");
+    printf("=============================\n");
+    printf("== STRUCTURED CONTROL FLOW ==\n");
+    printf("=============================\n");
     _PyCfgBuilder_BeyondRelooper(g);
-    printf("\\===structured control flow in wasm:\n");
-    printf(" \\==structured control flow in wasm:\n");
-    printf("  \\=structured control flow in wasm:\n");
-    printf("   \\structured control flow in wasm:\n");
 
     /* do not run on optimized code unit? */
     if (_PyCfg_OptimizeCodeUnit(g, consts, const_cache, nlocals,
