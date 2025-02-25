@@ -43,6 +43,8 @@
 #include "pycore_opcode_metadata.h" // _PyOpcode_opcode_metadata, _PyOpcode_num_popped/pushed
 #undef NEED_OPCODE_METADATA
 
+#include "wasm_target.h"
+
 #define COMP_GENEXP   0
 #define COMP_LISTCOMP 1
 #define COMP_SETCOMP  2
@@ -7657,9 +7659,7 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
     if (consts == NULL) {
         goto error;
     }
-    printf("%s before instr_sequence_to_cfg\n", __func__);
     g = instr_sequence_to_cfg(u->u_instr_sequence);
-    printf("%s after instr_sequence_to_cfg\n", __func__);
     if (g == NULL) {
         goto error;
     }
@@ -7671,29 +7671,13 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
         goto error;
     }
 
-    printf("CFG before optimization:\n");
-    _PyCfgBuilder_DebugPrint(g);
-
-    /* new dominator stuff */
-    _PyCfgBuilder_ComputeDominators(g);
-    _PyCfgBasicblock_ComputeImmediateDominators(g);
-    _PyCfgBuilder_ReversePostorder(g);
-    _PyCfgBasicblock_ComputeDominatorTree(g);
-    printf("CFG after dominator calculation:\n");
-    _PyCfgBuilder_DebugPrint(g);
-    printf("=============================\n");
-    printf("== STRUCTURED CONTROL FLOW ==\n");
-    printf("=============================\n");
-    _PyCfgBuilder_BeyondRelooper(g);
-
-    /* do not run on optimized code unit? */
     if (_PyCfg_OptimizeCodeUnit(g, consts, const_cache, nlocals,
                                 nparams, u->u_metadata.u_firstlineno) < 0) {
         goto error;
     }
 
-    // printf("CFG after optimization:\n");
-    // _PyCfgBuilder_DebugPrint(g);
+    Wasm wasm = _PyCfgBuilder_StructureControlFlow(g);
+    wasm_print(wasm);
 
     int stackdepth;
     int nlocalsplus;
@@ -7702,9 +7686,6 @@ optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache,
                                                  &optimized_instrs) < 0) {
         goto error;
     }
-
-    // printf("Final instruction sequence:\n");
-    // _PyCfgBuilder_DebugPrintInstructionSequence(&optimized_instrs);
 
     /** Assembly **/
 
