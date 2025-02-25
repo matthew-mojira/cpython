@@ -11,6 +11,7 @@ extern "C" {
 #include "pycore_compile.h"
 #include "pycore_instruction_sequence.h"
 #include "pycore_opcode_utils.h"
+#include "wasm_target.h"
 
 struct _PyCfgBuilder;
 
@@ -20,17 +21,9 @@ int _PyCfgBuilder_Addop(struct _PyCfgBuilder *g, int opcode, int oparg, _Py_Sour
 struct _PyCfgBuilder* _PyCfgBuilder_New(void);
 void _PyCfgBuilder_Free(struct _PyCfgBuilder *g);
 int _PyCfgBuilder_CheckSize(struct _PyCfgBuilder* g);
+
 int _PyCfgBuilder_GetSize(struct _PyCfgBuilder* g);
-
-void _PyCfgBuilder_DebugPrint(struct _PyCfgBuilder *);
-void _PyCfgBuilder_DebugPrintInstructionSequence(_PyInstructionSequence *seq);
-
-void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *);
-void _PyCfgBasicblock_ComputeImmediateDominators(struct _PyCfgBuilder *);
-void _PyCfgBuilder_ReversePostorder(struct _PyCfgBuilder *);
-void _PyCfgBasicblock_ComputeDominatorTree(struct _PyCfgBuilder *);
-
-void _PyCfgBuilder_BeyondRelooper(struct _PyCfgBuilder *);
+Wasm _PyCfgBuilder_StructureControlFlow(struct _PyCfgBuilder *);
 
 int _PyCfg_ResolveJumpsAndExceptions(struct _PyCfgBuilder *g);
 int _PyCfg_OptimizeCodeUnit(struct _PyCfgBuilder *g, PyObject *consts, PyObject *const_cache,

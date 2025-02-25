@@ -7,7 +7,7 @@
 #include "pycore_opcode_metadata.h" // OPCODE_HAS_ARG, etc
 
 #include <stdbool.h>
-
+#include "wasm_target.h"
 
 #undef SUCCESS
 #undef ERROR
@@ -48,6 +48,7 @@ typedef struct _PyCfgBasicblock {
        block reached by normal control flow. */
     struct _PyCfgBasicblock *b_next;
 
+    /* fields used as part of beyond relooper algorithm */
     int any_label;  // TODO label each basic block
     struct _PyCfgBasicblock **dominators;
     struct _PyCfgBasicblock *imm_dominator;
@@ -90,6 +91,10 @@ struct _PyCfgBuilder {
     struct _PyCfgBasicblock **g_postorder;
     /* label for the next instruction to be placed */
     _PyJumpTargetLabel g_current_label;
+
+    /* beyond relooper related fields */
+    int g_size;
+    Wasm g_wasm;
 };
 
 typedef struct _PyCfgBuilder cfg_builder;
@@ -2857,6 +2862,7 @@ _PyCfg_JumpLabelsToTargets(cfg_builder *g)
     return SUCCESS;
 }
 
+// BEYOND RELOOPER IMPLEMENTATION
 
 void dfs(int size, basicblock *b, basicblock **visited, basicblock **postorder) {
     // make sure node not already visited
@@ -2881,7 +2887,7 @@ void dfs(int size, basicblock *b, basicblock **visited, basicblock **postorder) 
 
 
 /* require dominators to be computed first */
-void _PyCfgBuilder_ReversePostorder(struct _PyCfgBuilder *g) {
+void compute_reverse_postorder(struct _PyCfgBuilder *g) {
     int size = _PyCfgBuilder_GetSize(g);
     g->g_postorder = PyMem_Calloc(size, sizeof(basicblock *));
     basicblock **visited = PyMem_Calloc(size, sizeof(basicblock *));
@@ -2893,7 +2899,7 @@ void _PyCfgBuilder_ReversePostorder(struct _PyCfgBuilder *g) {
  *   https://en.wikipedia.org/wiki/Dominator_(graph_theory)
  * which is apparently O(n^2), so don't make complicated functions.
  */
-void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *g) {
+void compute_dominator(struct _PyCfgBuilder *g) {
     int size = _PyCfgBuilder_GetSize(g);
 
     for (basicblock *b = g->g_block_list; b != NULL; b = b->b_list) {
@@ -2920,66 +2926,60 @@ void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *g) {
 
             basicblock **new_doms = (basicblock **) PyMem_Calloc(size, sizeof(basicblock *)); // XXX memory leak
 
-            //if (b->b_predecessors > 0) {
-                int i = 0;
-                for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list)
-                    new_doms[i++] = c;
+            int i = 0;
+            for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list)
+                new_doms[i++] = c;
 
-                // get predecessors
-                // printf("starting to get predecessors\n");
-                int predecessors = 0;
-                for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
-                    // not a predecessor
-                    if (b == c->b_next && BB_HAS_FALLTHROUGH(c)) {
-                        /* ok */
-                        // printf("match on next\n");
-                    } else {
-                        // printf("next missed: ");
-                        if (c->b_instr == NULL) {
-                            // printf("null\n");
-                            continue;
-                        }
-                        // XXX checks every instruction of basic block, only need to check last
-                        int found = 0;
-                        for (int j = 0; j < c->b_iused; j++) {
-                            cfg_instr ins = c->b_instr[j];
-                            // XXX doesn't work without optimized CFG
-                            if (b == ins.i_target || b == ins.i_except) {
-                                found = 1;
-                                break;
-                            }
-                        }
-                        if (!found) {
-                            // printf("not target or except\n");
-                            continue;
-                        }
-                        // printf("matched on i_target or i_except\n");
+            // get predecessors
+            // printf("starting to get predecessors\n");
+            int predecessors = 0;
+            for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
+                // not a predecessor
+                if (b == c->b_next && BB_HAS_FALLTHROUGH(c)) {
+                    /* ok */
+                    // printf("match on next\n");
+                } else {
+                    // printf("next missed: ");
+                    if (c->b_instr == NULL) {
+                        // printf("null\n");
+                        continue;
                     }
-                    predecessors += 1;
-
-                    // {c} is a predecessor, take intersection with new_doms
-                    for (i = 0; i < size; i++) {
-                        if (new_doms[i] == NULL) continue;
-
-                        // check if new_doms[i] appears in the predecessor's dominator set
-                        int exists = 0;
-                        for (int j = 0; j < size; j++) {
-                            if (new_doms[i] == c->dominators[j]) {
-                                exists = 1;
-                                break;
-                            }
+                    // XXX checks every instruction of basic block, only need to check last
+                    int found = 0;
+                    for (int j = 0; j < c->b_iused; j++) {
+                        cfg_instr ins = c->b_instr[j];
+                        // XXX doesn't work without optimized CFG
+                        if (b == ins.i_target || b == ins.i_except) {
+                            found = 1;
+                            break;
                         }
+                    }
+                    if (!found) {
+                        // printf("not target or except\n");
+                        continue;
+                    }
+                    // printf("matched on i_target or i_except\n");
+                }
+                predecessors += 1;
 
-                        if (!exists) {
-                            new_doms[i] = NULL;
+                // {c} is a predecessor, take intersection with new_doms
+                for (i = 0; i < size; i++) {
+                    if (new_doms[i] == NULL) continue;
+
+                    // check if new_doms[i] appears in the predecessor's dominator set
+                    int exists = 0;
+                    for (int j = 0; j < size; j++) {
+                        if (new_doms[i] == c->dominators[j]) {
+                            exists = 1;
+                            break;
                         }
+                    }
+
+                    if (!exists) {
+                        new_doms[i] = NULL;
                     }
                 }
-                // FIXME this still fails sometimes
-                // if (predecessors != b->b_predecessors) {
-                //    printf("Discrepancy (%d): expected %d, got %d\n", b->b_label.id, b->b_predecessors, predecessors);
-                // }
-            //}
+            }
 
             // Add b to the dominator set
             int b_exists = 0;
@@ -3040,8 +3040,7 @@ void _PyCfgBuilder_ComputeDominators(struct _PyCfgBuilder *g) {
     } while (changed);
 }
 
-/* require dominators to be computed */
-void _PyCfgBasicblock_ComputeImmediateDominators(cfg_builder *g) {
+void compute_immediate_dominator(cfg_builder *g) {
     int size = _PyCfgBuilder_GetSize(g);
 
     for (basicblock *b = g->g_block_list; b != NULL; b = b->b_list) {
@@ -3102,7 +3101,7 @@ void _PyCfgBasicblock_ComputeImmediateDominators(cfg_builder *g) {
     }
 }
 
-void _PyCfgBasicblock_ComputeDominatorTree(cfg_builder *g) {
+void compute_dominator_tree(cfg_builder *g) {
     int size = _PyCfgBuilder_GetSize(g);
 
     // initialize immediately dominates list
@@ -3149,115 +3148,7 @@ void _PyCfgBasicblock_ComputeDominatorTree(cfg_builder *g) {
     }
 }
 
-// macros
-// #define PRINT_FUNC_0() printf("%s()\n", __func__);
-// #define PRINT_FUNC_1(arg1) printf("%s(%p)\n", __func__, (void*)(arg1))
-// #define PRINT_FUNC_2(arg1, arg2) printf("%s(%p, %p)\n", __func__, (void*)(arg1), (void*)(arg2))
-// #define PRINT_FUNC_3(arg1, arg2, arg3) printf("%s(%p, %p, %p)\n", __func__, (void*)(arg1), (void*)(arg2), (void*)(arg3))
-// #define PRINT_FUNC_4(arg1, arg2, arg3, arg4) printf("%s(%p, %p, %p, %p)\n", __func__, (void*)(arg1), (void*)(arg2), (void*)(arg3), (void*)(arg4))
-// #define PRINT_FUNC_5(arg1, arg2, arg3, arg4, arg5) printf("%s(%p, %p, %p, %p, %p)\n", __func__, (void*)(arg1), (void*)(arg2), (void*)(arg3), (void*)(arg4), (void*)(arg5))
-#define PRINT_FUNC_0() ;
-#define PRINT_FUNC_1(arg1) ;
-#define PRINT_FUNC_2(arg1, arg2) ;
-#define PRINT_FUNC_3(arg1, arg2, arg3) ;
-#define PRINT_FUNC_4(arg1, arg2, arg3, arg4) ;
-#define PRINT_FUNC_5(arg1, arg2, arg3, arg4, arg5) ;
-// #define PRINT_FUNC() ;
-
-// WASM types
-
-typedef struct _wasm_structure {
-    enum { WASM_BLOCK, WASM_LOOP, WASM_IF, WASM_BR, WASM_RETURN, PY_WRAPPER, STRUCT_APPEND } w_type;
-    union {
-        struct _wasm_structure *w_one;
-        struct {
-            struct _wasm_structure *fst;
-            struct _wasm_structure *snd;
-        } w_two;
-        void *w_block;
-        int w_int;
-        /* do not use this union for WASM_RETURN */
-    } w_data;
-} wasm_structure;
-
-typedef wasm_structure *Wasm;
-
-Wasm wasm_block(Wasm);
-Wasm wasm_loop(Wasm);
-Wasm wasm_if(Wasm, Wasm);
-
-Wasm wasm_br(int);
-Wasm wasm_return(void);
-
-Wasm wasm_wrapper(void *);
-
-#define WASM_ALLOC() (PyMem_Calloc(1, sizeof(wasm_structure)))
-#define WASM_SET_ONE(X) w->w_data.w_one = ( X );
-#define WASM_SET_TWO(X, Y) w->w_data.w_two.fst = ( X ); w->w_data.w_two.snd = ( Y );
-
-Wasm wasm_wrapper(void *data) {
-    PRINT_FUNC_1(data);
-
-    Wasm w = WASM_ALLOC();
-    w->w_type = PY_WRAPPER;
-    w->w_data.w_block = data;
-    return w;
-}
-
-Wasm wasm_block(Wasm b) {
-    PRINT_FUNC_1(b);
-
-    Wasm w = WASM_ALLOC();
-    w->w_type = WASM_BLOCK;
-    WASM_SET_ONE(b);
-    return w;
-}
-
-Wasm wasm_loop(Wasm b) {
-    PRINT_FUNC_1(b);
-
-    Wasm w = WASM_ALLOC();
-    w->w_type = WASM_LOOP;
-    WASM_SET_ONE(b);
-    return w;
-}
-
-Wasm wasm_if(Wasm t, Wasm f) {
-    PRINT_FUNC_2(t, f);
-
-    Wasm w = WASM_ALLOC();
-    w->w_type = WASM_IF;
-    WASM_SET_TWO(t, f);
-    return w;
-}
-
-Wasm wasm_br(int i) {
-    PRINT_FUNC_1(i);
-
-    Wasm w = WASM_ALLOC();
-    w->w_type = WASM_BR;
-    w->w_data.w_int = i;
-    return w;
-}
-
-Wasm wasm_return(void) {
-    PRINT_FUNC_0();
-
-    Wasm w = WASM_ALLOC();
-    w->w_type = WASM_RETURN;
-    return w;
-}
-
-Wasm wasm_append(Wasm fst, Wasm snd) {
-    PRINT_FUNC_2(fst, snd);
-
-    Wasm w = WASM_ALLOC();
-    w->w_type = STRUCT_APPEND;
-    WASM_SET_TWO(fst, snd);
-    return w;
-}
-
-// context stuff
+// Context
 
 typedef struct _context {
     enum { IF_THEN_ELSE, LOOP_HEADED_BY, BLOCK_FOLLOWED_BY } c_type;
@@ -3266,8 +3157,6 @@ typedef struct _context {
 } Context;
 
 Context *block_followed_by(basicblock *b) {
-    PRINT_FUNC_1(b);
-
     Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
     c->c_type = BLOCK_FOLLOWED_BY;
     c->c_data = b;
@@ -3276,8 +3165,6 @@ Context *block_followed_by(basicblock *b) {
 }
 
 Context *if_then_else(void) {
-    PRINT_FUNC_0();
-
     Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
     c->c_type = IF_THEN_ELSE;
     c->c_data = NULL;
@@ -3286,8 +3173,6 @@ Context *if_then_else(void) {
 }
 
 Context *loop_headed_by(basicblock *b) {
-    PRINT_FUNC_1(b);
-
     Context *c = PyMem_Malloc(sizeof(Context)); // XXX memory leak
     c->c_type = LOOP_HEADED_BY;
     c->c_data = b;
@@ -3296,15 +3181,11 @@ Context *loop_headed_by(basicblock *b) {
 }
 
 Context *inside(Context *head, Context *tail) {
-    PRINT_FUNC_2(head, tail);
-
     head->c_next = tail;
     return head;
 }
 
 int context_index(basicblock *b, Context *ctx) {
-    PRINT_FUNC_2(b, ctx);
-
     assert(ctx != NULL);
     if (ctx == NULL) {
         // printf("> context is NULL\n");
@@ -3324,8 +3205,6 @@ int context_index(basicblock *b, Context *ctx) {
 }
 
 cfg_instr *node_body(basicblock *b) {
-    PRINT_FUNC_1(b);
-
     return b->b_instr;
 }
 
@@ -3339,9 +3218,7 @@ typedef struct _control_flow {
     } flow_data;
 } control_flow;
 
-control_flow flow_leaving(cfg_builder *g, basicblock *b) {
-    PRINT_FUNC_2(g, b);
-
+static control_flow flow_leaving(cfg_builder *g, basicblock *b) {
     cfg_instr *last = basicblock_last_instr(b);
     if (!last) {
         printf("> last is NULL\n");
@@ -3371,19 +3248,17 @@ last_null:
     return flow;
 }
 
+// Beyond relooper
+
 int is_backward(cfg_builder *g, basicblock *from, basicblock *to);
 int is_merge_block(cfg_builder *g, basicblock *b);
 int is_loop_header(cfg_builder *g, basicblock *b);
-
-// flow_leaving
 
 Wasm do_tree(cfg_builder *, basicblock *, Context *);
 Wasm node_within(cfg_builder *, basicblock *, basicblock **, Context *);
 Wasm do_branch(cfg_builder *, basicblock *, basicblock *, Context *);
 
 Wasm do_tree(cfg_builder *g, basicblock *b, Context *context) {
-    PRINT_FUNC_3(g, b, context);
-
     // get children of b
     int size = _PyCfgBuilder_GetSize(g);
     basicblock **children = PyMem_Calloc(size, sizeof(basicblock *)); // XXX memory leak
@@ -3419,8 +3294,6 @@ Wasm do_tree(cfg_builder *g, basicblock *b, Context *context) {
 }
 
 Wasm node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *ctx) {
-    PRINT_FUNC_4(g, b, children, ctx);
-
     /* match on children being empty */
     int size = _PyCfgBuilder_GetSize(g);
     int empty = 1;
@@ -3469,8 +3342,6 @@ Wasm node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *
 }
 
 Wasm do_branch(cfg_builder *g, basicblock *src, basicblock *tgt, Context *ctx) {
-    PRINT_FUNC_4(g, src, tgt, ctx);
-
     if (is_backward(g, src, tgt) || is_merge_block(g, tgt)) {
         return wasm_br(context_index(tgt, ctx));
     } else {
@@ -3478,14 +3349,9 @@ Wasm do_branch(cfg_builder *g, basicblock *src, basicblock *tgt, Context *ctx) {
     }
 }
 
-
 // auxiliary functions
 
 int is_backward(cfg_builder *g, basicblock *from, basicblock *to) {
-    PRINT_FUNC_3(g, from, to);
-
-    /* FIXME to is sometimes passed in as null */
-
     int i = 0;
     while (g->g_postorder[i++] != to);
 
@@ -3498,8 +3364,6 @@ int is_backward(cfg_builder *g, basicblock *from, basicblock *to) {
 }
 
 int is_merge_block(cfg_builder *g, basicblock *b) {
-    PRINT_FUNC_2(g, b);
-
     int preds = 0;
 
     for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
@@ -3528,8 +3392,6 @@ int is_merge_block(cfg_builder *g, basicblock *b) {
 }
 
 int is_loop_header(cfg_builder *g, basicblock *b) {
-    PRINT_FUNC_2(g, b);
-
     int preds = 0;
 
     for (basicblock *c = g->g_block_list; c != NULL; c = c->b_list) {
@@ -3556,74 +3418,13 @@ int is_loop_header(cfg_builder *g, basicblock *b) {
     return preds;
 }
 
-#define PRINT_INDENT(S) for (int i = 0; i < indent; i++) putchar(' '); printf("%s\n", S );
+Wasm _PyCfgBuilder_StructureControlFlow(struct _PyCfgBuilder *g) {
+    // preliminary computations
+    compute_dominator(g);
+    compute_immediate_dominator(g);
+    compute_reverse_postorder(g);
+    compute_dominator_tree(g);
 
-void wasm_print(Wasm w, int indent) {
-    // PRINT_FUNC_2(w, indent);
-
-    // printf("%d: ", w->w_type);
-
-    switch (w->w_type) {
-    case WASM_BLOCK:
-        // printf("WASM_BLOCK\n");
-        PRINT_INDENT("block");
-        wasm_print(w->w_data.w_one, indent + 2);
-        PRINT_INDENT("end");
-        break;
-    case WASM_LOOP:
-        // printf("WASM_LOOP\n");
-        PRINT_INDENT("loop");
-        wasm_print(w->w_data.w_one, indent + 2);
-        PRINT_INDENT("end");
-        break;
-    case WASM_IF:
-        // printf("WASM_IF\n");
-        PRINT_INDENT("if");
-        wasm_print(w->w_data.w_two.fst, indent + 2);
-        PRINT_INDENT("else");
-        wasm_print(w->w_data.w_two.snd, indent + 2);
-        PRINT_INDENT("end");
-        break;
-    case WASM_BR:
-        // printf("WASM_BR\n");
-        for (int i = 0; i < indent; i++)
-            putchar(' ');
-        printf("br %d\n", w->w_data.w_int);
-        break;
-    case WASM_RETURN:
-        // printf("WASM_RETURN\n");
-        PRINT_INDENT("return");
-        break;
-    case PY_WRAPPER:
-        // printf("PY_WRAPPER\n");
-        /* print basic block */
-        basicblock *b = (basicblock *) w->w_data.w_block;
-        // PRINT_INDENT("<basic block>");
-        for (int i = 0; i < b->b_iused; i++) {
-            cfg_instr c = b->b_instr[i];
-            for (int i = 0; i < indent; i++)
-                putchar(' ');
-            printf("%s %d", _PyOpcode_OpName[c.i_opcode], c.i_oparg);
-            if (is_jump(&c)) printf("(JUMP)");
-            printf("\n");
-        }
-        break;
-    case STRUCT_APPEND:
-        // printf("STRUCT_APPEND\n");
-        // printf("<<- fst\n");
-        wasm_print(w->w_data.w_two.fst, indent);
-        // printf("<<- snd\n");
-        wasm_print(w->w_data.w_two.snd, indent);
-        // printf("<<- end struct append\n");
-        break;
-    }
-}
-
-/* the big one, which also prints */
-void _PyCfgBuilder_BeyondRelooper(struct _PyCfgBuilder *g) {
-    PRINT_FUNC_1(g);
-
-    Wasm w = do_tree(g, g->g_entryblock, NULL);
-
-    wasm_print(w, 0);
+    // beyond relooper algorithm
+    return do_tree(g, g->g_entryblock, NULL);
 }
