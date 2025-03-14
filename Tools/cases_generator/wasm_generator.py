@@ -28,6 +28,25 @@ def replace_error_with_assert(
         print("label was not error:", uop.name)
     #out.emit(label)
 
+def replace_error_no_pop(
+    out: CWriter,
+    tkn: Token,
+    tkn_iter: Iterator[Token],
+    uop: Uop,
+    stack: Stack,
+    inst: Instruction | None,
+) -> None:
+    next(tkn_iter)  # LPAREN
+    next(tkn_iter)  # RPAREN
+    next(tkn_iter)  # Semi colon
+    out.emit_at("assert(0); // (matthew) replace error", tkn)
+
+WASM_REPLACEMENTS = {
+        "DECREF_INPUTS": replace_decrefs,
+        "ERROR_IF": replace_error_with_assert,
+        "ERROR_NO_POP": replace_error_no_pop,
+        }
+
 def write_uop(
         uop: Uop, out: CWriter, offset: int, inst: Instruction, braces: bool
         ) -> int:
@@ -56,7 +75,7 @@ def write_uop(
 #                 if inst.family is None:
 #                     out.emit(f"(void){cache.name};\n")
 #             offset += cache.size
-    emit_tokens(out, uop, Stack(), inst, { "DECREF_INPUTS": replace_decrefs, "ERROR_IF": replace_error_with_assert})
+    emit_tokens(out, uop, Stack(), inst, WASM_REPLACEMENTS)
 #         if uop.properties.stores_sp:
 #             for i, var in enumerate(uop.stack.outputs):
 #                 out.emit(stack.push(var))
@@ -70,9 +89,11 @@ def generate_wasm(
         filenames: list[str],
         analysis: Analysis,
         outfile: TextIO,
+        wat_out: TextIO,
         ) -> None:
     write_header(__file__, filenames, outfile)
     out = CWriter(outfile, 0, False)
+    out_wat = CWriter(wat_out, 0, False)
 
     specialized = get_specialized(analysis)
 
@@ -87,11 +108,37 @@ def generate_wasm(
     for mnemonic, instruction in analysis.instructions.items():
         # skip all specialized opcodes
         if mnemonic in specialized:
+            print("skipping specialized bytecode", mnemonic)
             continue
-        total += 1
+        if mnemonic.startswith("INSTRUMENTED"):
+            print("skipping instrumented bytecode", mnemonic)
+            continue
 
         # out.emit(f"{mnemonic}: {instruction.properties.tier}\n")
         props = instruction.properties
+
+        # skip bad properties
+        if props.escapes:
+            print("skipping escaping bytecode", mnemonic)
+            continue
+        # skip large instructions
+        #if len(instruction.parts) > 1:
+        #    print("skipping multi-part bytecode", mnemonic)
+        #    continue
+        # skip jump instructions
+        #if props.jumps:
+        #    print("skipping jumping instruction", mnemonic)
+        #    continue
+        # skip "always exits" instructions
+        #if props.always_exits:
+        #    print('skipping "always exits" instruction', mnemonic)
+        #    continue
+        # skip "stores sp" instructions
+        if props.stores_sp:
+            print('skipping "stores sp" instruction', mnemonic)
+            continue
+
+        total += 1
 
         out.emit("\n/* ------------------------\n")
         out.emit(f" * OPCODE: {mnemonic}\n")
@@ -113,6 +160,7 @@ def generate_wasm(
                 props.oparg_and_1, props.const_oparg != -1]):
             bytecodes += 1
             out.emit(" * INCOMPATIBLE!\n")
+
             #continue
 
         out.emit(" * PROPERTIES:\n")
@@ -121,20 +169,21 @@ def generate_wasm(
         out.emit(" */\n")
         out.emit("// @@@!!\n")
 
+        out.emit(f"// PARTS: {len(instruction.parts)}\n")
+
         for part in instruction.parts:
             # Uop or skip, assume Uop
             if isinstance(part, Skip):
                 out.emit(f"// SKIP unused cache entry/{part.size}\n")
                 continue
             if "specializing" in part.annotations:
-                out.emit(f"// SKIP specializing: {part.name}\n")
+                out.emit(f"// SKIP specializing: {mnemonic}\n")
                 continue
+            out.emit(f"// PART {part}\n")
 
             inputs = len(part.stack.inputs) + part.properties.oparg
             outputs = len(part.stack.outputs)
 
-            out.emit("\n")
-            out.emit(f'// (import "python" "handler{part.name}" (func $handler{part.name} (param{' i32' * inputs}) (result{' i32' * outputs})))\n')
             out.emit("\n")
 
             decl = ""
@@ -152,23 +201,31 @@ def generate_wasm(
                     out.emit("// >>#!@#@! SKIPPING because there are more than 2 outputs\n")
                     continue
             # name
-            decl += f"handler{part.name}("
+            decl += f"hander_{mnemonic}("
+
             # params
-            if inputs == 0:
-                decl += "void"
-            else:
-                if part.properties.oparg:
-                    decl += "int oparg"
-                    decl += "".join([f", {'PyObject *' if input.type is None or input.type == "" else input.type}{input.name}" for input in part.stack.inputs])
-                else:
-                    # not handling condition, (size, peek (?))
-                    decl += ", ".join([f"{'PyObject *' if input.type is None or input.type == "" else input.type}{input.name}" for input in part.stack.inputs])
+            params = [f"{'PyObject *' if input.type is None or input.type == "" else input.type}{input.name}" for input in part.stack.inputs]
+            if part.properties.oparg:
+                params.append("int oparg") # load const
+            if part.properties.uses_frame:
+                params.append("_PyInterpreterFrame *frame") # load global
+            if part.properties.uses_tstate:
+                params.append("PyThreadState *tstate") # load global
+
+            # add params to decl
+            decl += "void" if not params else ", ".join(params)
 
             # closing )
             decl += ")"
 
+            # wasm import name
+            wasm_import = f'(import "python" "hander_{mnemonic}" (func $handler_{mnemonic} (param{' i32' * len(params)}) (result{' i32' * outputs})))\n'
+            out.emit(f"// {wasm_import}")
+            out_wat.emit(wasm_import)
+            out.emit("\n")
+
             # declaration + attribute
-            out.emit(f'__attribute__ ((export_name("handler{part.name}")))\n')
+            # out.emit(f'__attribute__ ((export_name("hander_{mnemonic}")))\n')
             out.emit(f"{decl};\n")
 
             # definition
@@ -229,5 +286,7 @@ if __name__ == "__main__":
     if len(args.input) == 0:
         args.input.append(DEFAULT_INPUT)
     data = analyze_files(args.input)
+    print(args.output)
     with open(args.output, "w") as outfile:
-        generate_wasm(args.input, data, outfile)
+        with open("output/wasm_cases.wat", "w") as outfile_wasm:
+            generate_wasm(args.input, data, outfile, outfile_wasm)
