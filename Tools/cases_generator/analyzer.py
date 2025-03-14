@@ -21,6 +21,7 @@ class Properties:
     uses_co_consts: bool
     uses_co_names: bool
     uses_locals: bool
+    uses_locals_strict: bool
     has_free: bool
     side_exit: bool
     pure: bool
@@ -29,6 +30,7 @@ class Properties:
     const_oparg: int = -1
     uses_frame: bool | None = None
     uses_tstate: bool | None = None
+    instrumented: bool | None = None
 
     def dump(self, indent: str) -> None:
         print(indent, end="")
@@ -52,11 +54,13 @@ class Properties:
             uses_co_consts=any(p.uses_co_consts for p in properties),
             uses_co_names=any(p.uses_co_names for p in properties),
             uses_locals=any(p.uses_locals for p in properties),
+            uses_locals_strict=any(p.uses_locals_strict for p in properties),
             has_free=any(p.has_free for p in properties),
             side_exit=any(p.side_exit for p in properties),
             pure=all(p.pure for p in properties),
             uses_frame=any(p.uses_frame for p in properties),
             uses_tstate=any(p.uses_tstate for p in properties),
+            instrumented=any(p.instrumented for p in properties),
         )
 
     @property
@@ -80,6 +84,7 @@ SKIP_PROPERTIES = Properties(
     uses_co_consts=False,
     uses_co_names=False,
     uses_locals=False,
+    uses_locals_strict=False,
     has_free=False,
     side_exit=False,
     pure=False,
@@ -550,6 +555,10 @@ def compute_properties(op: parser.InstDef) -> Properties:
         )
     error_with_pop = has_error_with_pop(op)
     error_without_pop = has_error_without_pop(op)
+    uses_co_consts=variable_used(op, "FRAME_CO_CONSTS")
+    uses_co_names=variable_used(op, "FRAME_CO_NAMES")
+    uses_locals=(variable_used(op, "GETLOCAL") or variable_used(op, "SETLOCAL")) and not has_free
+    uses_locals_strict=(variable_used(op, "GETLOCAL") or variable_used(op, "SETLOCAL"))
     return Properties(
         escapes=makes_escaping_api_call(op),
         error_with_pop=error_with_pop,
@@ -563,15 +572,15 @@ def compute_properties(op: parser.InstDef) -> Properties:
         needs_this=variable_used(op, "this_instr"),
         always_exits=always_exits(op),
         stores_sp=variable_used(op, "SYNC_SP"),
-        uses_co_consts=variable_used(op, "FRAME_CO_CONSTS"),
-        uses_co_names=variable_used(op, "FRAME_CO_NAMES"),
-        uses_locals=(variable_used(op, "GETLOCAL") or variable_used(op, "SETLOCAL"))
-        and not has_free,
+        uses_co_consts=uses_co_consts,
+        uses_co_names=uses_co_names,
+        uses_locals=uses_locals,
+        uses_locals_strict=uses_locals_strict,
         has_free=has_free,
         pure="pure" in op.annotations,
         tier=tier_variable(op),
         # matthew
-        uses_frame=variable_used(op, "frame"),
+        uses_frame=variable_used(op, "frame") or uses_co_consts or uses_co_names or uses_locals_strict,
         uses_tstate=variable_used(op, "tstate"),
     )
 
