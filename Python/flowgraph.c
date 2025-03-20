@@ -1,4 +1,3 @@
-
 #include <stdbool.h>
 
 #include "Python.h"
@@ -327,6 +326,20 @@ _PyCfgBuilder_DumpGraph(const basicblock *entryblock)
 }
 
 
+void _PyCfg_WasmPrintBasicBlock(const void *block, int indent) {
+    basicblock *b = block;
+    for (int i = 0; i < b->b_iused; i++) {
+        cfg_instr c = b->b_instr[i];
+        int j = indent;
+        while (j --> 0) putchar(' ');
+            printf("\033[1;32m%s\033[0m %d", _PyOpcode_OpName[c.i_opcode], c.i_oparg);
+        if (is_jump(&c)) {
+            printf("(JUMP)");
+            printf(" %p", c.i_target);
+        }
+        printf("\n");
+    }
+}
 
 /***** CFG construction and modification *****/
 
@@ -3259,6 +3272,7 @@ int is_loop_header(cfg_builder *g, basicblock *b);
 Wasm do_tree(cfg_builder *, basicblock *, Context *);
 Wasm node_within(cfg_builder *, basicblock *, basicblock **, Context *);
 Wasm do_branch(cfg_builder *, basicblock *, basicblock *, Context *);
+Wasm translate_basicblock(basicblock *);
 
 Wasm do_tree(cfg_builder *g, basicblock *b, Context *context) {
     // get children of b
@@ -3310,7 +3324,10 @@ Wasm node_within(cfg_builder *g, basicblock *b, basicblock **children, Context *
     if (empty) {
         PyMem_Free(children);
 
-        Wasm act_x = wasm_wrapper((void *) b);
+        // TRANSLATION POINT FOR THE BASIC BLOCKS
+        //Wasm act_x = wasm_wrapper((void *) b);
+        Wasm act_x = translate_basicblock(b);
+        //Wasm act_x = wasm_null();
         Wasm second;
 
         control_flow flow = flow_leaving(g, b);
@@ -3349,6 +3366,26 @@ Wasm do_branch(cfg_builder *g, basicblock *src, basicblock *tgt, Context *ctx) {
     } else {
         return do_tree(g, tgt, ctx);
     }
+}
+
+Wasm translate_basicblock(basicblock *b) {
+    Wasm wasm = wasm_null();
+
+    for (int i = 0; i < b->b_iused; i++) {
+        cfg_instr instr = b->b_instr[i];
+        Wasm wasm_instr;
+
+        switch (instr.i_opcode) {
+#include "wasm_cases.c.h"
+        default:
+            printf("Failed to translate instruction %d\n", instr.i_opcode);
+            wasm_instr = wasm_string1("<missing instruction>");
+        }
+
+        wasm = wasm_append(wasm, wasm_instr);
+    }
+
+    return wasm;
 }
 
 // auxiliary functions
