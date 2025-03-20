@@ -22,6 +22,8 @@ struct _PyCfgBuilder* _PyCfgBuilder_New(void);
 void _PyCfgBuilder_Free(struct _PyCfgBuilder *g);
 int _PyCfgBuilder_CheckSize(struct _PyCfgBuilder* g);
 
+void _PyCfg_WasmPrintBasicBlock(const void *, int);
+
 int _PyCfgBuilder_GetSize(struct _PyCfgBuilder* g);
 Wasm _PyCfgBuilder_StructureControlFlow(struct _PyCfgBuilder *);
 
